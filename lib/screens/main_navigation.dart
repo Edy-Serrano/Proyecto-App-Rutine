@@ -149,34 +149,3 @@ class _MainNavigationState extends State<MainNavigation> {
     ).then((_) => setState(() {}));
   }
 }
-
-class _PlaceholderScreen extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _PlaceholderScreen({required this.icon, required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.bgDark,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 64, color: AppTheme.neonPurple.withOpacity(0.4)),
-            const SizedBox(height: 16),
-            Text(label,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.textSecondary,
-                    )),
-            const SizedBox(height: 8),
-            Text('Próximamente — Fase 4',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textMuted,
-                    )),
-          ],
-        ),
-      ),
-    );
-  }
-}
