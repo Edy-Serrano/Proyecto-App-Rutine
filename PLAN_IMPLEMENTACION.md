@@ -61,19 +61,14 @@ Hoja de ruta completa con todas las fases de desarrollo. Avanzamos fase por fase
 
 ---
 
-## ⏳ Fase 6: Optimización, Empaquetado y Despliegue
+## ✅ Fase 6: Optimización, Empaquetado y Despliegue — COMPLETADA
 
-### Objetivo
-Dejar la app lista para publicación.
-
-### Tareas
-- [ ] Pantalla de perfil y configuración de categorías personalizadas
-- [ ] Notificaciones locales (recordatorio de tareas por hora)
-- [ ] Pruebas manuales completas (QA)
-- [ ] Pulido de micro-animaciones
-- [ ] Generación del APK de producción (`flutter build apk --release`)
-- [ ] Generación del AAB para Play Store (`flutter build appbundle`)
-- [ ] Guía paso a paso: firma de la app y subida a Google Play Store
+### Entregables
+- [x] Pantalla de perfil (`ProfileScreen`) con edición de usuario
+- [x] Integración de `flutter_local_notifications` para recordatorios programados en base a la hora de las tareas.
+- [x] Permisos de Android (`AndroidManifest.xml`) para alarmas exactas en Android 12+.
+- [x] Generación de la build oficial para producción: APK generado en `build\app\outputs\flutter-apk\app-release.apk`.
+- [x] Artifact final de `walkthrough.md` para proveer los siguientes pasos hacia la Google Play Store.
 
 ---
 

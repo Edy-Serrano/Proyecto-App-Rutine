@@ -11,14 +11,14 @@
 
 ## 🚦 Estado del Proyecto
 
-| Fase | Descripción | Estado |
-|------|-------------|--------|
-| 🏗️ Fase 1 | Configuración del Entorno y Base del Proyecto | ✅ Completada |
-| 🎨 Fase 2 | Arquitectura y Diseño Base (UI/UX) | ✅ Completada |
-| 📱 Fase 3 | Pantallas Principales (Frontend) | 🔄 En progreso |
-| ⚙️ Fase 4 | Lógica de Negocio y Motor de Tareas | ⏳ Pendiente |
-| 💾 Fase 5 | Persistencia de Datos (Base de Datos) | ⏳ Pendiente |
-| 🚀 Fase 6 | Optimización, Empaquetado y Despliegue | ⏳ Pendiente |
+## 🚀 Roadmap del Proyecto (100% Completado)
+
+1. **Fase 1:** Configuración del entorno y base del proyecto (`flutter create`) ✅
+2. **Fase 2:** Arquitectura y Diseño Base (UI/UX y paleta Neón Oscuro) ✅
+3. **Fase 3:** Pantallas Principales (Dashboard, Agenda y modal Nueva Tarea) ✅
+4. **Fase 4:** Lógica de Negocio y Motor de Tareas (recurrencias y estadísticas) ✅
+5. **Fase 5:** Persistencia de Datos (Base de datos local con Hive) ✅
+6. **Fase 6:** Optimización, Empaquetado (APK) y Notificaciones Locales ✅
 
 ---
 

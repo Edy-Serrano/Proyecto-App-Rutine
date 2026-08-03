@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rutine/models/task_model.dart';
 import 'package:rutine/services/hive_service.dart';
+import 'package:rutine/services/notification_service.dart';
 
 /// Proveedor central de estado con persistencia local mediante Hive.
 class TaskProvider extends ChangeNotifier {
@@ -158,6 +159,7 @@ class TaskProvider extends ChangeNotifier {
   Future<void> addTask(Task task) async {
     _tasks.add(task);
     await HiveService.addTask(task);
+    _scheduleNotificationIfNeeded(task);
     notifyListeners();
   }
 
@@ -168,6 +170,13 @@ class TaskProvider extends ChangeNotifier {
         isCompleted: !_tasks[index].isCompleted,
       );
       await HiveService.updateTask(_tasks[index]);
+      
+      if (_tasks[index].isCompleted) {
+        await NotificationService.cancelNotification(_tasks[index].id.hashCode);
+      } else {
+        _scheduleNotificationIfNeeded(_tasks[index]);
+      }
+      
       notifyListeners();
     }
   }
@@ -175,6 +184,7 @@ class TaskProvider extends ChangeNotifier {
   Future<void> deleteTask(String taskId) async {
     _tasks.removeWhere((t) => t.id == taskId);
     await HiveService.deleteTask(taskId);
+    await NotificationService.cancelNotification(taskId.hashCode);
     notifyListeners();
   }
 
@@ -183,7 +193,32 @@ class TaskProvider extends ChangeNotifier {
     if (index != -1) {
       _tasks[index] = updated;
       await HiveService.updateTask(updated);
+      await NotificationService.cancelNotification(updated.id.hashCode);
+      if (!updated.isCompleted) {
+        _scheduleNotificationIfNeeded(updated);
+      }
       notifyListeners();
+    }
+  }
+
+  Future<void> _scheduleNotificationIfNeeded(Task task) async {
+    if (task.time == null || task.isCompleted) return;
+    
+    DateTime scheduled = DateTime(
+      task.date.year,
+      task.date.month,
+      task.date.day,
+      task.time!.hour,
+      task.time!.minute,
+    );
+
+    if (scheduled.isAfter(DateTime.now())) {
+      await NotificationService.scheduleTaskNotification(
+        id: task.id.hashCode,
+        title: '¡Hora de tu tarea!',
+        body: task.title,
+        scheduledDate: scheduled,
+      );
     }
   }
 

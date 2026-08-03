@@ -3,12 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/screens/main_navigation.dart';
 import 'package:rutine/services/hive_service.dart';
+import 'package:rutine/services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Inicializamos la base de datos local
   await HiveService.init();
+
+  // Inicializamos las notificaciones locales
+  await NotificationService.init();
+  await NotificationService.requestPermissions();
 
   // Configuramos la barra de estado del teléfono para que sea transparente
   SystemChrome.setSystemUIOverlayStyle(
