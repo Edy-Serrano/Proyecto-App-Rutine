@@ -3,6 +3,8 @@ import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/providers/task_provider.dart';
 import 'package:rutine/screens/dashboard_screen.dart';
 import 'package:rutine/screens/agenda_screen.dart';
+import 'package:rutine/screens/stats_screen.dart';
+import 'package:rutine/screens/profile_screen.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
 
 class MainNavigation extends StatefulWidget {
@@ -21,8 +23,8 @@ class _MainNavigationState extends State<MainNavigation> {
   List<Widget> get _screens => [
     DashboardScreen(provider: _provider),
     AgendaScreen(provider: _provider),
-    const _PlaceholderScreen(icon: Icons.bar_chart_rounded, label: 'Estadísticas'),
-    const _PlaceholderScreen(icon: Icons.person_rounded, label: 'Perfil'),
+    StatsScreen(provider: _provider),
+    ProfileScreen(provider: _provider),
   ];
 
   @override

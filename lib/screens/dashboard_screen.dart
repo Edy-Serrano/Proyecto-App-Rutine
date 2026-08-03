@@ -15,11 +15,11 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _selectedDate = DateTime.now();
 
-  String get _greeting {
+  String _greeting(String name) {
     final hour = DateTime.now().hour;
-    if (hour < 12) return '¡Buenos días! ☀️';
-    if (hour < 19) return '¡Buenas tardes! 🌤️';
-    return '¡Buenas noches! 🌙';
+    if (hour < 12) return '¡Buenos días, $name! ☀️';
+    if (hour < 19) return '¡Buenas tardes, $name! 🌤️';
+    return '¡Buenas noches, $name! 🌙';
   }
 
   @override
@@ -52,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _greeting,
+                      _greeting(provider.userName),
                       style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                             color: AppTheme.textPrimary,
                           ),

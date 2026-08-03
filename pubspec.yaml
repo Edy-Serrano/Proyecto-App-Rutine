@@ -20,6 +20,8 @@ dependencies:
   cupertino_icons: ^1.0.8
   google_fonts: ^6.2.1
   percent_indicator: ^4.2.3
+  fl_chart: ^0.69.0
+  hive_flutter: ^1.1.0
 
 dev_dependencies:
   flutter_test:

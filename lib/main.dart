@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/screens/main_navigation.dart';
+import 'package:rutine/services/hive_service.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Inicializamos la base de datos local
+  await HiveService.init();
+
   // Configuramos la barra de estado del teléfono para que sea transparente
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(

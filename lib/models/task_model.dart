@@ -84,4 +84,37 @@ class Task {
       recurringDays: recurringDays ?? this.recurringDays,
     );
   }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'title': title,
+      'description': description,
+      'category': category.index,
+      'date': date.toIso8601String(),
+      'timeHour': time?.hour,
+      'timeMinute': time?.minute,
+      'isCompleted': isCompleted,
+      'isRecurring': isRecurring,
+      'recurringDays': recurringDays,
+    };
+  }
+
+  factory Task.fromMap(Map<dynamic, dynamic> map) {
+    TimeOfDay? t;
+    if (map['timeHour'] != null && map['timeMinute'] != null) {
+      t = TimeOfDay(hour: map['timeHour'] as int, minute: map['timeMinute'] as int);
+    }
+    return Task(
+      id: map['id'] as String,
+      title: map['title'] as String,
+      description: map['description'] as String?,
+      category: TaskCategory.values[map['category'] as int? ?? 0],
+      date: DateTime.parse(map['date'] as String),
+      time: t,
+      isCompleted: map['isCompleted'] as bool? ?? false,
+      isRecurring: map['isRecurring'] as bool? ?? false,
+      recurringDays: (map['recurringDays'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [],
+    );
+  }
 }

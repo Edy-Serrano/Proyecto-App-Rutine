@@ -28,51 +28,36 @@ Hoja de ruta completa con todas las fases de desarrollo. Avanzamos fase por fase
 
 ---
 
-## 🔄 Fase 3: Pantallas Principales (Frontend) — EN PROGRESO
+## ✅ Fase 3: Pantallas Principales (Frontend) — COMPLETADA
 
-### Objetivo
-Construir las interfaces completas donde el usuario interactúa con sus tareas.
-
-### Tareas
-- [/] **Modal / Pantalla "Nueva Tarea":**
-  - Selector de categoría con íconos y colores
-  - Campo de título y descripción
-  - DatePicker y TimePicker estilizados
-  - Switch de "Tarea Recurrente" con selector de días de la semana
-- [ ] **Pantalla Agenda / Calendario:**
-  - Calendario mensual interactivo (widget `TableCalendar` o implementación propia)
-  - Vista de tareas del día seleccionado
-  - Indicadores de días con tareas asignadas
-- [ ] **Integración del FAB:** conectar el botón + con el modal de nueva tarea
+### Entregables
+- [x] **Modal "Nueva Tarea":** Selector de categoría, título, descripción, DatePicker, TimePicker, switch de recurrencia con días
+- [x] **Pantalla Agenda / Calendario:** Calendario mensual interactivo, indicadores de días con tareas, barra de progreso del día
+- [x] **Integración del FAB:** Botón + conectado al modal de nueva tarea desde cualquier pantalla
 
 ---
 
-## ⏳ Fase 4: Lógica de Negocio y Motor de Tareas
+## ✅ Fase 4: Lógica de Negocio y Motor de Tareas — COMPLETADA
 
-### Objetivo
-Darle inteligencia y dinamismo a la aplicación.
-
-### Tareas
-- [ ] Algoritmo de recurrencia avanzado (generar instancias de tareas repetitivas)
-- [ ] Sistema de rachas (streaks): calcular días consecutivos completados
-- [ ] Pantalla de Estadísticas:
-  - Gráfico de barras semanal por categoría
-  - Gráfico de pastel (pie chart) de distribución
-  - Score mensual de productividad
-  - Mensajes motivadores basados en el rendimiento
+### Entregables
+- [x] Algoritmo de recurrencia dinámico sin duplicar datos
+- [x] Cálculo avanzado de rachas (streaks) actuales y mejor racha histórica
+- [x] Pantalla de Estadísticas con: 
+  - Gráfico de barras animado de los últimos 7 días
+  - Mensaje motivacional dinámico según el rendimiento
+  - Barras de progreso de completitud por categoría
+  - Gráfico de pastel (pie chart) interactivo de la distribución de tareas
 
 ---
 
-## ⏳ Fase 5: Persistencia de Datos (Base de Datos Local)
+## ✅ Fase 5: Persistencia de Datos — COMPLETADA
 
-### Objetivo
-Garantizar que toda la información se guarde de forma permanente en el dispositivo.
-
-### Tareas
-- [ ] Integración de base de datos local (**Hive** o **Isar**)
-- [ ] Persistencia de tareas creadas y su historial de completado
-- [ ] Migración del `TaskProvider` para leer/escribir en la base de datos
-- [ ] Guardado de preferencias del usuario (nombre, tema)
+### Entregables
+- [x] Integración de base de datos local rápida y ligera con **Hive** y `hive_flutter`
+- [x] Serialización JSON de los modelos (`toMap`, `fromMap`) sin dependencias de generación de código pesadas
+- [x] Creación de `HiveService` para gestionar la persistencia
+- [x] Migración del `TaskProvider` para sincronizar el estado reactivo con la persistencia en Hive
+- [x] Caja dedicada para preferencias del usuario (`prefsBox`) conectada al saludo dinámico del Dashboard
 
 ---
 
