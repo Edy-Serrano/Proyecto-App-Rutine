@@ -227,17 +227,23 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ),
         child: Row(
           children: [
-            LinearPercentIndicator(
-              width: MediaQuery.of(context).size.width - 160,
-              lineHeight: 6,
-              percent: rate,
-              progressColor: AppTheme.neonCyan,
-              backgroundColor: AppTheme.bgSurface,
-              barRadius: const Radius.circular(3),
-              padding: EdgeInsets.zero,
-              animation: true,
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return LinearPercentIndicator(
+                    width: constraints.maxWidth,
+                    lineHeight: 6,
+                    percent: rate,
+                    progressColor: AppTheme.neonCyan,
+                    backgroundColor: AppTheme.bgSurface,
+                    barRadius: const Radius.circular(3),
+                    padding: EdgeInsets.zero,
+                    animation: true,
+                  );
+                },
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 16),
             Text(
               '${(rate * 100).toInt()}% · $total tareas',
               style: TextStyle(

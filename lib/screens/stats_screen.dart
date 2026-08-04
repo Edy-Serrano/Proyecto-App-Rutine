@@ -338,21 +338,6 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: rate,
-              backgroundColor: AppTheme.bgSurface,
-              valueColor: AlwaysStoppedAnimation<Color>(cat.color),
-              minHeight: 6,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildPieChart(
       BuildContext context, Map<TaskCategory, int> byCategory) {
     final entries = byCategory.entries.toList();

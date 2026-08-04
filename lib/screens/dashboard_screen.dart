@@ -39,7 +39,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         slivers: [
           // === APP BAR ===
           SliverAppBar(
-            expandedHeight: 200,
+            expandedHeight: 155,
             floating: false,
             pinned: true,
             backgroundColor: AppTheme.bgDark,
@@ -47,12 +47,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF1A0533), AppTheme.bgDark],
+                    colors: [
+                      AppTheme.neonPurple.withOpacity(0.1),
+                      AppTheme.bgDark,
+                    ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                   ),
                 ),
-                padding: const EdgeInsets.fromLTRB(24, 60, 24, 16),
+                padding: const EdgeInsets.fromLTRB(24, 85, 24, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -73,11 +76,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ),
-            title: Text(
+            title: const Text(
               'Rutine',
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppTheme.neonPurple,
-                  ),
+              style: TextStyle(
+                color: AppTheme.neonPurple,
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.2,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ),
 
