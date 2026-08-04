@@ -38,7 +38,7 @@ Contiene la Interfaz de Usuario (UI). Son los widgets (Stateful o Stateless) con
 * **`dashboard_screen.dart`**: Pantalla de "Inicio". Muestra el saludo inicial (según la hora del día), el progreso circular del día actual y una lista de las tareas pendientes para hoy. Soporta interacciones táctiles completas (deslizar para completar/borrar, toque corto para detalles, toque largo para editar).
 * **`agenda_screen.dart`**: Vista de calendario. Usa un selector semanal deslizante. Permite ver las tareas asignadas a cualquier día en específico y también soporta acciones rápidas como marcar completado.
 * **`stats_screen.dart`**: Panel de métricas. Utiliza gráficos de barras y tarjetas analíticas para visualizar el rendimiento, progreso semanal, mensual, y rachas (streaks) de productividad.
-* **`profile_screen.dart`**: Pantalla de preferencias. Permite gestionar datos personales (nombre, foto de perfil), cambiar el modo visual (Claro/Oscuro), gestionar alertas locales y (próximamente) respaldos en la nube.
+* **`profile_screen.dart`**: Pantalla de preferencias. Permite gestionar datos personales (nombre, foto de perfil), cambiar el modo visual (Claro/Oscuro), gestionar alertas locales y generar respaldos seguros de datos (cifrados con AES-256) exportables mediante share_plus.
 * **`add_task_sheet.dart`**: Es un `BottomSheet` dinámico y reutilizable que funge como formulario interactivo. Permite crear **nuevas tareas** o **editar tareas existentes**. Cuenta con selectores estilizados para categoría, calendario de fechas, selector de horas y minutos de recordatorio.
 
 ---
@@ -46,7 +46,7 @@ Contiene la Interfaz de Usuario (UI). Son los widgets (Stateful o Stateless) con
 ### 📁 `services/`
 Se encarga de la comunicación directa con APIs del sistema, bases de datos o servicios externos. Son clases estáticas o singletons que no manejan estado visual.
 
-* **`hive_service.dart`**: Inicializa la base de datos local y provee la envoltura para leer/escribir las Tareas (en formato JSON stringificado), preferencias de tema, notificaciones, imagen de perfil y nombre de usuario en cajas (Boxes) de Hive.
+* **`hive_service.dart`**: Inicializa la base de datos local utilizando cifrado nativo **AES-256** (cuya llave maestra se genera y guarda de forma segura con `flutter_secure_storage`). Provee la envoltura para leer/escribir las Tareas, preferencias de tema, notificaciones, imagen de perfil, nombre de usuario y funciones para exportar la base de datos de manera segura (`exportSecureBackup`).
 * **`notification_service.dart`**: Puente con el sistema operativo Android usando `flutter_local_notifications`. Gestiona los permisos iniciales, la inicialización de zonas horarias locales (Timezones) y la programación exacta de alarmas en segundo plano, así como su cancelación.
 
 ---
@@ -55,3 +55,10 @@ Se encarga de la comunicación directa con APIs del sistema, bases de datos o se
 Agrupa los tokens de diseño y configuraciones estéticas de la app.
 
 * **`app_theme.dart`**: Definición central de la identidad visual. Define paletas de colores (fondos, tarjetas, acentos Neón), estilos de tipografía base (Google Fonts `Outfit`), formas de botones, y configuraciones globales para el Tema Oscuro y el Tema Claro de Material 3.
+
+---
+
+### 📁 Scripts de Ciberseguridad (Raíz)
+Archivos ubicados en la raíz del proyecto para asegurar la distribución de la aplicación.
+
+* **`build_secure_apk.bat`** (Windows) y **`build_secure_apk.sh`** (Linux/Mac): Automatizan el proceso de compilación de producción de Flutter, inyectando banderas de ofuscación de código (`--obfuscate` y `--split-debug-info`) para compilar el código de Dart a binario de máquina inescrutable y prevenir ingeniería inversa.

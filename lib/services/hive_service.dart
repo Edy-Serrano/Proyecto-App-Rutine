@@ -1,14 +1,63 @@
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:rutine/models/task_model.dart';
+import 'package:encrypt/encrypt.dart' as enc;
+import 'package:path_provider/path_provider.dart';
 
 class HiveService {
   static const String _tasksBoxName = 'tasksBox';
   static const String _prefsBoxName = 'prefsBox';
+  static const String _keyName = 'hive_encryption_key';
+  
+  static late Uint8List _encryptionKey;
 
   static Future<void> init() async {
     await Hive.initFlutter();
-    await Hive.openBox(_tasksBoxName);
-    await Hive.openBox(_prefsBoxName);
+
+    const secureStorage = FlutterSecureStorage();
+    String? encryptionKeyString = await secureStorage.read(key: _keyName);
+
+    if (encryptionKeyString == null) {
+      final key = Hive.generateSecureKey();
+      await secureStorage.write(
+        key: _keyName,
+        value: base64UrlEncode(key),
+      );
+      encryptionKeyString = base64UrlEncode(key);
+    }
+    
+    _encryptionKey = base64Url.decode(encryptionKeyString);
+
+    // MIGRATION: tasksBox
+    try {
+      await Hive.openBox(_tasksBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
+    } catch (e) {
+      print("Migrating $_tasksBoxName to encrypted...");
+      final unencryptedBox = await Hive.openBox(_tasksBoxName);
+      final mapData = Map<dynamic, dynamic>.from(unencryptedBox.toMap());
+      await unencryptedBox.close();
+      await Hive.deleteBoxFromDisk(_tasksBoxName);
+      
+      final newBox = await Hive.openBox(_tasksBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
+      await newBox.putAll(mapData);
+    }
+
+    // MIGRATION: prefsBox
+    try {
+      await Hive.openBox(_prefsBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
+    } catch (e) {
+      print("Migrating $_prefsBoxName to encrypted...");
+      final unencryptedBox = await Hive.openBox(_prefsBoxName);
+      final mapData = Map<dynamic, dynamic>.from(unencryptedBox.toMap());
+      await unencryptedBox.close();
+      await Hive.deleteBoxFromDisk(_prefsBoxName);
+      
+      final newBox = await Hive.openBox(_prefsBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
+      await newBox.putAll(mapData);
+    }
   }
 
   static Box get _box => Hive.box(_tasksBoxName);
@@ -19,7 +68,11 @@ class HiveService {
     for (var i = 0; i < _box.length; i++) {
       final map = _box.getAt(i) as Map<dynamic, dynamic>?;
       if (map != null) {
-        tasks.add(Task.fromMap(map));
+        try {
+          tasks.add(Task.fromMap(map));
+        } catch (e) {
+          print("Error parsing task: $e");
+        }
       }
     }
     return tasks;
@@ -80,5 +133,27 @@ class HiveService {
 
   static Future<void> setNotificationsEnabled(bool enabled) async {
     await _prefsBox.put('notificationsEnabled', enabled);
+  }
+
+  // ─── BACKUP Y SEGURIDAD ───────────────────────────────────────────────────
+
+  static Future<File> exportSecureBackup() async {
+    final tasks = getTasks().map((t) => t.toMap()).toList();
+    final jsonStr = jsonEncode(tasks);
+    
+    final key = enc.Key(_encryptionKey);
+    final iv = enc.IV.fromSecureRandom(16);
+    
+    final encrypter = enc.Encrypter(enc.AES(key));
+    final encrypted = encrypter.encrypt(jsonStr, iv: iv);
+    
+    // Formato: iv_base64:encrypted_base64
+    final backupData = "${iv.base64}:${encrypted.base64}";
+    
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File('${directory.path}/rutine_backup.enc');
+    await file.writeAsString(backupData);
+    
+    return file;
   }
 }

@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/providers/task_provider.dart';
 import 'package:rutine/providers/theme_provider.dart';
+import 'package:rutine/services/hive_service.dart';
+import 'package:share_plus/share_plus.dart';
 
 class ProfileScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -255,7 +257,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
               icon: Icons.backup_rounded,
               iconColor: AppTheme.catWork,
               title: 'Copia de seguridad',
-              subtitle: 'Guardar datos localmente',
+              subtitle: 'Exportar datos cifrados',
+              onTap: () async {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Generando respaldo cifrado...')),
+                );
+                final file = await HiveService.exportSecureBackup();
+                await Share.shareXFiles([XFile(file.path)], text: 'Respaldo de Rutine (Cifrado)');
+              },
             ),
             
             const SizedBox(height: 32),

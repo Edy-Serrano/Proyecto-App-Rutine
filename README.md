@@ -87,9 +87,18 @@ El proyecto está diseñado exclusivamente para **Flutter**.
    ```bash
    flutter run
    ```
-5. **Construir el Instalador (APK de Producción):**
-   Si deseas exportar la aplicación lista para ser instalada en cualquier teléfono Android y compartirla, debes generar un APK comprimido. Ejecuta:
-   ```bash
-   flutter build apk --release
-   ```
-   *Nota: El archivo final lo encontrarás guardado dentro de la ruta `build/app/outputs/flutter-apk/app-release.apk`.*
+5. **Construir el Instalador Seguro (APK de Producción Obfuscado):**
+   Para un nivel máximo de seguridad de ciberseguridad, Rutine incluye scripts nativos que **ofuscan** el código para prevenir la ingeniería inversa y el escaneo de cadenas (strings) expuestas.
+   Ejecuta el script proporcionado según tu sistema operativo:
+   - En Windows: Haz doble clic en `build_secure_apk.bat` o ejecútalo en consola.
+   - En Linux/Mac: Ejecuta `bash build_secure_apk.sh` en la terminal.
+   
+   *Nota: El archivo final seguro lo encontrarás guardado dentro de la ruta `build/app/outputs/flutter-apk/app-release.apk`.*
+
+---
+
+## Arquitectura de Ciberseguridad Integrada
+Rutine incluye un sólido protocolo de seguridad (implementado en la Fase de Seguridad):
+1. **Encriptación de Base de Datos:** Todos los datos en reposo guardados por `Hive` están cifrados usando **AES-256**, con una llave criptográfica maestra generada y almacenada en el hardware (`Keystore` usando `flutter_secure_storage`).
+2. **Backups Seguros:** Al solicitar una Copia de Seguridad desde el Perfil, Rutine genera un archivo cifrado (`.enc`) usando encriptación simétrica. El backup es exportado usando el sistema nativo de tu teléfono (vía `share_plus`), asegurando que nadie pueda interceptar o leer tus datos si el archivo cae en manos equivocadas.
+3. **Resistencia a Ingeniería Inversa:** El uso de `--obfuscate` al compilar asegura que las estructuras de datos, llaves de API, y lógica interna se transformen en código máquina (ARM) ilegible.
