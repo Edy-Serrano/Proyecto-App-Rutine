@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rutine/theme/app_theme.dart';
 
-enum TaskCategory { hygiene, university, work, shopping, leisure, custom }
+enum TaskCategory { hygiene, university, work, shopping, leisure, sports, food, custom }
 
 extension TaskCategoryExtension on TaskCategory {
   String get label {
@@ -11,6 +11,8 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.work:        return 'Trabajo';
       case TaskCategory.shopping:    return 'Compras';
       case TaskCategory.leisure:     return 'Paseo / Ocio';
+      case TaskCategory.sports:      return 'Deporte';
+      case TaskCategory.food:        return 'Comida';
       case TaskCategory.custom:      return 'Otro';
     }
   }
@@ -22,6 +24,8 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.work:        return Icons.work_rounded;
       case TaskCategory.shopping:    return Icons.shopping_bag_rounded;
       case TaskCategory.leisure:     return Icons.directions_walk_rounded;
+      case TaskCategory.sports:      return Icons.fitness_center_rounded;
+      case TaskCategory.food:        return Icons.restaurant_rounded;
       case TaskCategory.custom:      return Icons.tag_rounded;
     }
   }
@@ -33,6 +37,8 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.work:        return AppTheme.catWork;
       case TaskCategory.shopping:    return AppTheme.catShopping;
       case TaskCategory.leisure:     return AppTheme.catLeisure;
+      case TaskCategory.sports:      return AppTheme.catSports;
+      case TaskCategory.food:        return AppTheme.catFood;
       case TaskCategory.custom:      return AppTheme.neonCyan;
     }
   }
@@ -48,6 +54,7 @@ class Task {
   bool isCompleted;
   bool isRecurring;
   List<int> recurringDays; // 1=Lunes, 7=Domingo (basado en weekday de DateTime)
+  int? notificationMinutes;
 
   Task({
     required this.id,
@@ -59,6 +66,7 @@ class Task {
     this.isCompleted = false,
     this.isRecurring = false,
     this.recurringDays = const [],
+    this.notificationMinutes,
   });
 
   Task copyWith({
@@ -71,6 +79,7 @@ class Task {
     bool? isCompleted,
     bool? isRecurring,
     List<int>? recurringDays,
+    int? notificationMinutes,
   }) {
     return Task(
       id: id ?? this.id,
@@ -82,6 +91,7 @@ class Task {
       isCompleted: isCompleted ?? this.isCompleted,
       isRecurring: isRecurring ?? this.isRecurring,
       recurringDays: recurringDays ?? this.recurringDays,
+      notificationMinutes: notificationMinutes ?? this.notificationMinutes,
     );
   }
 
@@ -97,6 +107,7 @@ class Task {
       'isCompleted': isCompleted,
       'isRecurring': isRecurring,
       'recurringDays': recurringDays,
+      'notificationMinutes': notificationMinutes,
     };
   }
 
@@ -115,6 +126,7 @@ class Task {
       isCompleted: map['isCompleted'] as bool? ?? false,
       isRecurring: map['isRecurring'] as bool? ?? false,
       recurringDays: (map['recurringDays'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [],
+      notificationMinutes: map['notificationMinutes'] as int?,
     );
   }
 }

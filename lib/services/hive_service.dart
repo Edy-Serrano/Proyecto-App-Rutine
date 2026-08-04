@@ -57,4 +57,28 @@ class HiveService {
   static Future<void> setUserName(String name) async {
     await _prefsBox.put('userName', name);
   }
+
+  static String? getUserImagePath() {
+    return _prefsBox.get('userImagePath');
+  }
+
+  static Future<void> setUserImagePath(String path) async {
+    await _prefsBox.put('userImagePath', path);
+  }
+
+  static bool getIsDarkMode() {
+    return _prefsBox.get('isDarkMode', defaultValue: true);
+  }
+
+  static Future<void> setIsDarkMode(bool isDark) async {
+    await _prefsBox.put('isDarkMode', isDark);
+  }
+
+  static bool getNotificationsEnabled() {
+    return _prefsBox.get('notificationsEnabled', defaultValue: false);
+  }
+
+  static Future<void> setNotificationsEnabled(bool enabled) async {
+    await _prefsBox.put('notificationsEnabled', enabled);
+  }
 }

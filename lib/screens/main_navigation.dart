@@ -6,9 +6,11 @@ import 'package:rutine/screens/agenda_screen.dart';
 import 'package:rutine/screens/stats_screen.dart';
 import 'package:rutine/screens/profile_screen.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
+import 'package:rutine/providers/theme_provider.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  final ThemeProvider themeProvider;
+  const MainNavigation({super.key, required this.themeProvider});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -24,7 +26,7 @@ class _MainNavigationState extends State<MainNavigation> {
     DashboardScreen(provider: _provider),
     AgendaScreen(provider: _provider),
     StatsScreen(provider: _provider),
-    ProfileScreen(provider: _provider),
+    ProfileScreen(provider: _provider, themeProvider: widget.themeProvider),
   ];
 
   @override
@@ -82,7 +84,11 @@ class _MainNavigationState extends State<MainNavigation> {
   Widget _navItem(int index, IconData icon, String label) {
     final isSelected = _currentIndex == index;
     return GestureDetector(
-      onTap: () => setState(() => _currentIndex = index),
+      onTap: () {
+        setState(() {
+          _currentIndex = index;
+        });
+      },
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -92,25 +98,28 @@ class _MainNavigationState extends State<MainNavigation> {
               ? AppTheme.neonPurple.withOpacity(0.1)
               : Colors.transparent,
         ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppTheme.neonPurple : AppTheme.textMuted,
-              size: 22,
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 9,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+        child: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
                 color: isSelected ? AppTheme.neonPurple : AppTheme.textMuted,
+                size: 22,
               ),
-            ),
-          ],
+              const SizedBox(height: 2),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: isSelected ? AppTheme.neonPurple : AppTheme.textMuted,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

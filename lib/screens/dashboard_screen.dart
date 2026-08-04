@@ -3,6 +3,8 @@ import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/models/task_model.dart';
 import 'package:rutine/providers/task_provider.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:flutter/services.dart';
+import 'package:rutine/screens/add_task_sheet.dart';
 
 class DashboardScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -40,7 +42,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             backgroundColor: AppTheme.bgDark,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                decoration: const BoxDecoration(
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [Color(0xFF1A0533), AppTheme.bgDark],
                     begin: Alignment.topCenter,
@@ -231,22 +233,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
           provider.deleteTask(task.id);
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: task.isCompleted
-              ? AppTheme.bgSurface.withOpacity(0.5)
-              : AppTheme.bgCard,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
+      child: GestureDetector(
+        onTap: () => _showTaskDetails(context, task),
+        onLongPress: () {
+          HapticFeedback.mediumImpact();
+          showModalBottomSheet(
+            context: context,
+            isScrollControlled: true,
+            backgroundColor: Colors.transparent,
+            builder: (context) => AddTaskSheet(
+              provider: provider,
+              taskToEdit: task,
+            ),
+          );
+        },
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          margin: const EdgeInsets.only(bottom: 10),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
             color: task.isCompleted
-                ? AppTheme.neonGreen.withOpacity(0.3)
-                : task.category.color.withOpacity(0.25),
-            width: 1,
+                ? AppTheme.bgSurface.withOpacity(0.5)
+                : AppTheme.bgCard,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: task.isCompleted
+                  ? AppTheme.neonGreen.withOpacity(0.3)
+                  : task.category.color.withOpacity(0.25),
+              width: 1,
+            ),
           ),
-        ),
         child: Row(
           children: [
             // Icono de categoría
@@ -293,7 +309,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             // Checkbox animado
             GestureDetector(
-              onTap: () => setState(() => provider.toggleTaskCompletion(task.id)),
+              onTap: () async {
+                if (!task.isCompleted) {
+                  await provider.toggleTaskCompletion(task.id);
+                  if (mounted) setState(() {});
+                }
+              },
+              onLongPress: () async {
+                if (task.isCompleted) {
+                  HapticFeedback.heavyImpact();
+                  await provider.toggleTaskCompletion(task.id);
+                  if (mounted) setState(() {});
+                }
+              },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 width: 26,
@@ -319,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
-    );
+    ));
   }
 
   Widget _swipeBackground(bool isComplete) {
@@ -365,6 +393,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 .bodyMedium
                 ?.copyWith(color: AppTheme.textMuted),
             textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+  void _showTaskDetails(BuildContext context, Task task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(task.category.icon, color: task.category.color),
+            const SizedBox(width: 12),
+            Expanded(child: Text(task.title, style: TextStyle(color: AppTheme.textPrimary))),
+          ],
+        ),
+        content: Text(
+          task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
           ),
         ],
       ),

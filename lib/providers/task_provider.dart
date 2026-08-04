@@ -7,6 +7,7 @@ import 'package:rutine/services/notification_service.dart';
 class TaskProvider extends ChangeNotifier {
   List<Task> _tasks = [];
   String _userName = 'Usuario';
+  String? _userImagePath;
 
   TaskProvider() {
     _loadTasks();
@@ -15,11 +16,13 @@ class TaskProvider extends ChangeNotifier {
   void _loadTasks() {
     _tasks = HiveService.getTasks();
     _userName = HiveService.getUserName();
+    _userImagePath = HiveService.getUserImagePath();
     notifyListeners();
   }
 
   List<Task> get tasks => List.unmodifiable(_tasks);
   String get userName => _userName;
+  String? get userImagePath => _userImagePath;
 
   // ─── CONSULTAS ──────────────────────────────────────────────────────────────
 
@@ -138,6 +141,26 @@ class TaskProvider extends ChangeNotifier {
     return map;
   }
 
+  /// Completadas por nombre de tarea
+  Map<String, int> completedByTaskName() {
+    final map = <String, int>{};
+    for (final task in _tasks.where((t) => t.isCompleted)) {
+      final name = task.title.trim();
+      map[name] = (map[name] ?? 0) + 1;
+    }
+    return map;
+  }
+
+  /// Total de tareas por nombre de tarea
+  Map<String, int> totalByTaskName() {
+    final map = <String, int>{};
+    for (final task in _tasks) {
+      final name = task.title.trim();
+      map[name] = (map[name] ?? 0) + 1;
+    }
+    return map;
+  }
+
   /// Datos de completitud por día para los últimos 7 días (para el bar chart)
   List<DailyStats> getLast7DaysStats() {
     final result = <DailyStats>[];
@@ -212,19 +235,32 @@ class TaskProvider extends ChangeNotifier {
       task.time!.minute,
     );
 
+    if (task.notificationMinutes != null) {
+      scheduled = scheduled.subtract(Duration(minutes: task.notificationMinutes!));
+    }
+
     if (scheduled.isAfter(DateTime.now())) {
+      final title = task.notificationMinutes != null
+          ? 'En ${task.notificationMinutes} min: ¡Tu tarea!'
+          : '¡Hora de tu tarea!';
       await NotificationService.scheduleTaskNotification(
         id: task.id.hashCode,
-        title: '¡Hora de tu tarea!',
+        title: title,
         body: task.title,
         scheduledDate: scheduled,
       );
     }
   }
 
-  Future<void> updateUserName(String newName) async {
-    _userName = newName;
-    await HiveService.setUserName(newName);
+  Future<void> updateUserName(String name) async {
+    _userName = name;
+    await HiveService.setUserName(name);
+    notifyListeners();
+  }
+
+  Future<void> updateUserImage(String path) async {
+    _userImagePath = path;
+    await HiveService.setUserImagePath(path);
     notifyListeners();
   }
 

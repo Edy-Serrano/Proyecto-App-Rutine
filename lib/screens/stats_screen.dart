@@ -17,6 +17,9 @@ class StatsScreen extends StatelessWidget {
     final last7 = provider.getLast7DaysStats();
     final byCategory = provider.completedByCategory();
     final totalByCategory = provider.totalByCategory();
+    
+    final byTaskName = provider.completedByTaskName();
+    final totalByTaskName = provider.totalByTaskName();
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -104,6 +107,20 @@ class StatsScreen extends StatelessWidget {
               if (total == 0) return const SizedBox.shrink();
               return _buildCategoryRow(context, cat, completed, total);
             }),
+
+            const SizedBox(height: 28),
+            // === PROGRESO POR TAREA ESPECÍFICA ===
+            _buildSectionTitle(context, '🎯 Por tarea específica'),
+            const SizedBox(height: 12),
+            if (totalByTaskName.isEmpty)
+              Text('No hay tareas registradas', style: TextStyle(color: AppTheme.textMuted))
+            else
+              ...totalByTaskName.entries.map((entry) {
+                final taskName = entry.key;
+                final total = entry.value;
+                final completed = byTaskName[taskName] ?? 0;
+                return _buildTaskNameRow(context, taskName, completed, total);
+              }),
 
             // === PIE CHART ===
             if (byCategory.isNotEmpty) ...[
@@ -205,7 +222,7 @@ class StatsScreen extends StatelessWidget {
                 final s = stats[groupIndex];
                 return BarTooltipItem(
                   '${(s.completionRate * 100).toInt()}%\n${s.completedTasks}/${s.totalTasks}',
-                  const TextStyle(
+                  TextStyle(
                       color: AppTheme.textPrimary,
                       fontSize: 11,
                       fontWeight: FontWeight.w600),
@@ -247,7 +264,7 @@ class StatsScreen extends StatelessWidget {
                   if (value == 0 || value == 0.5 || value == 1.0) {
                     return Text(
                       '${(value * 100).toInt()}%',
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppTheme.textMuted, fontSize: 9),
                     );
                   }
@@ -464,7 +481,7 @@ class StatsScreen extends StatelessWidget {
                     Expanded(
                       child: Text(
                         e.key.label,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppTheme.textSecondary, fontSize: 12),
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -488,4 +505,54 @@ class StatsScreen extends StatelessWidget {
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Widget _buildTaskNameRow(
+    BuildContext context,
+    String taskName,
+    int completed,
+    int total,
+  ) {
+    final double percentage = total > 0 ? (completed / total) : 0;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.check_circle_outline_rounded, color: AppTheme.neonPurple, size: 20),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  taskName,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                        color: AppTheme.textPrimary,
+                        fontWeight: FontWeight.w500,
+                      ),
+                ),
+              ),
+              Text(
+                '$completed / $total',
+                style: TextStyle(
+                  color: AppTheme.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: percentage,
+              backgroundColor: AppTheme.bgSurface,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.neonPurple),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

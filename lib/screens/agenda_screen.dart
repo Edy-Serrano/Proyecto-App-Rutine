@@ -4,6 +4,7 @@ import 'package:rutine/models/task_model.dart';
 import 'package:rutine/providers/task_provider.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
 import 'package:percent_indicator/percent_indicator.dart';
+import 'package:flutter/services.dart';
 
 class AgendaScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -78,7 +79,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left_rounded,
+            icon: Icon(Icons.chevron_left_rounded,
                 color: AppTheme.textSecondary),
             onPressed: () => setState(() {
               _focusedMonth = DateTime(
@@ -92,7 +93,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 ),
           ),
           IconButton(
-            icon: const Icon(Icons.chevron_right_rounded,
+            icon: Icon(Icons.chevron_right_rounded,
                 color: AppTheme.textSecondary),
             onPressed: () => setState(() {
               _focusedMonth = DateTime(
@@ -122,7 +123,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 .map((d) => Expanded(
                       child: Center(
                         child: Text(d,
-                            style: const TextStyle(
+                            style: TextStyle(
                               color: AppTheme.textMuted,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -238,7 +239,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
             const Spacer(),
             Text(
               '${(rate * 100).toInt()}% · $total tareas',
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppTheme.textSecondary, fontSize: 12),
             ),
           ],
@@ -248,8 +249,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
   }
 
   Widget _buildCompactTaskTile(Task task) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+    return GestureDetector(
+      onTap: () => _showTaskDetails(context, task),
+      onLongPress: () {
+        HapticFeedback.mediumImpact();
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: Colors.transparent,
+          builder: (context) => AddTaskSheet(
+            provider: widget.provider,
+            taskToEdit: task,
+          ),
+        );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.bgCard,
@@ -262,15 +277,35 @@ class _AgendaScreenState extends State<AgendaScreen> {
       ),
       child: Row(
         children: [
-          Container(
-            width: 8,
-            height: 8,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: task.isCompleted
-                  ? AppTheme.neonGreen
-                  : task.category.color,
+          GestureDetector(
+            onTap: () async {
+              await widget.provider.toggleTaskCompletion(task.id);
+              if (mounted) setState(() {});
+            },
+            onLongPress: () async {
+              if (task.isCompleted) {
+                HapticFeedback.heavyImpact();
+                await widget.provider.toggleTaskCompletion(task.id);
+                if (mounted) setState(() {});
+              }
+            },
+            child: Container(
+              width: 24,
+              height: 24,
+              margin: const EdgeInsets.only(right: 12),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: task.isCompleted ? AppTheme.neonGreen : task.category.color,
+                  width: 2,
+                ),
+                color: task.isCompleted
+                    ? AppTheme.neonGreen.withOpacity(0.2)
+                    : Colors.transparent,
+              ),
+              child: task.isCompleted
+                  ? const Icon(Icons.check, size: 14, color: AppTheme.neonGreen)
+                  : null,
             ),
           ),
           Expanded(
@@ -316,6 +351,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -341,6 +377,32 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 .textTheme
                 .bodyMedium
                 ?.copyWith(color: AppTheme.textMuted),
+          ),
+        ],
+      ),
+    );
+  }
+  void _showTaskDetails(BuildContext context, Task task) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Icon(task.category.icon, color: task.category.color),
+            const SizedBox(width: 12),
+            Expanded(child: Text(task.title, style: TextStyle(color: AppTheme.textPrimary))),
+          ],
+        ),
+        content: Text(
+          task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
+          style: TextStyle(color: AppTheme.textSecondary),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
           ),
         ],
       ),
