@@ -1,102 +1,95 @@
-# 🎮 Rutine — Tu Agenda Personal Gamificada
+# 📘 Rutine - Documentación General
 
-> Aplicación Android desarrollada con **Flutter** para gestionar rutinas diarias, hábitos personales y eventos con estadísticas de rendimiento.
-
----
-
-## 📱 Capturas de Estado Actual
-> _La app ya corre en el dispositivo LM G910 (Android 12). Fase 3 en progreso._
+Bienvenido a la documentación oficial de **Rutine**, tu gestor personal de tareas y rutinas diseñado bajo un concepto gamificado y una estética atractiva de temática oscura y luminosa.
 
 ---
 
-## 🚦 Estado del Proyecto
+## 🎯 Propósito del Proyecto
+Rutine nace para resolver el problema clásico de la falta de constancia al realizar tareas diarias. A diferencia de un simple bloc de notas, Rutine incentiva al usuario mostrándole gráficas de su rendimiento diario, semanal y mensual, además de un contador de **"Rachas" (Streaks)** para que mantenga su nivel de productividad en alto. 
 
-## 🚀 Roadmap del Proyecto (100% Completado)
-
-1. **Fase 1:** Configuración del entorno y base del proyecto (`flutter create`) ✅
-2. **Fase 2:** Arquitectura y Diseño Base (UI/UX y paleta Neón Oscuro) ✅
-3. **Fase 3:** Pantallas Principales (Dashboard, Agenda y modal Nueva Tarea) ✅
-4. **Fase 4:** Lógica de Negocio y Motor de Tareas (recurrencias y estadísticas) ✅
-5. **Fase 5:** Persistencia de Datos (Base de datos local con Hive) ✅
-6. **Fase 6:** Optimización, Empaquetado (APK) y Notificaciones Locales ✅
+Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamente satisfactoria mediante micro-interacciones.
 
 ---
 
-## 🎯 Objetivo
-Crear una aplicación móvil que combine funciones de **agenda**, **lista de tareas categorizadas** y un **panel de estadísticas de rendimiento**, con un diseño gamificado oscuro estilo Neón.
+## ✨ Funcionalidades Principales (Features)
+
+1. **Gestión Integral de Tareas:**
+   - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, etc).
+   - Asignación de iconos específicos y colores por cada categoría.
+   - Posibilidad de establecer fechas y horas precisas.
+
+2. **Recordatorios Inteligentes (Notificaciones Locales):**
+   - Alarmas exactas integradas nativamente en Android.
+   - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu tarea (10, 15, 30 minutos, etc).
+
+3. **Gamificación y Estadísticas:**
+   - Panel de control principal con porcentaje de progreso en tiempo real del día.
+   - Sección interactiva de gráficas de barras para evaluar los últimos 7 días.
+   - Contadores numéricos que premian los días perfectos consecutivos (Mejor Racha y Racha Actual).
+
+4. **Diseño Visual Dinámico:**
+   - Cambio fluido e instantáneo entre **Modo Claro** y **Modo Oscuro** que respeta la jerarquía de lectura del sistema.
+   - Interacciones hápticas (vibración leve) al completar o desmarcar tareas.
+   - Interfaces fluidas mediante uso de `BottomSheets` y `Dialogs` emergentes redondeados.
+
+5. **Persistencia Total Sin Internet (Offline First):**
+   - Tus datos y configuraciones personales viajan contigo de forma local gracias a la integración nativa y ligera de `Hive Database`.
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 💻 Guía Rápida de Uso (Para el Usuario Final)
 
-- **Framework:** Flutter (Dart)
-- **Plataforma:** Android (probado en LG G910 - Android 12 API 31)
-- **Diseño:** Gamificación con paleta Neón Oscuro
-- **Tipografía:** Outfit (Google Fonts)
-- **Paquetes:**
-  - `google_fonts` — Tipografía premium
-  - `percent_indicator` — Indicadores circulares de progreso
+### Pantalla de Inicio (Dashboard)
+- Es lo primero que ves al abrir la app. Se enfoca exclusivamente en **tu día de hoy**.
+- **Completar tarea:** Simplemente toca el círculo (checkbox) o desliza (swipe) la tarea de izquierda a derecha. ¡Verás una luz verde!
+- **Ver Detalles:** Toca la tarjeta de la tarea (sobre el texto) para leer su descripción completa en una elegante ventana.
+- **Editar Tarea:** Mantén presionada cualquier tarea que necesites modificar.
+- **Borrar Tarea:** Desliza (swipe) una tarea completamente hacia la izquierda. (¡Cuidado, esta acción no se puede deshacer!).
 
----
+### Agenda (Calendario Semanal)
+- Toca el ícono de calendario en la barra inferior.
+- En la parte superior verás un carrusel de fechas. Selecciónalo para ir al día que desees organizar o revisar (ideal para prepararte para el día de mañana).
 
-## 📂 Estructura del Proyecto
+### Panel de Estadísticas (Stats)
+- Toca el ícono de gráfica en la barra inferior.
+- Monitorea tus gráficas y compite contigo mismo para lograr la "Mejor Racha Histórica" de días en donde marcaste el 100% de tus rutinas.
 
-```
-lib/
-├── main.dart                    # Punto de entrada
-├── theme/
-│   └── app_theme.dart           # Paleta de colores y tema global
-├── models/
-│   └── task_model.dart          # Modelo de datos: Task y categorías
-├── providers/
-│   └── task_provider.dart       # Gestión de estado (ChangeNotifier)
-└── screens/
-    ├── main_navigation.dart     # Navegación principal (Bottom Nav + FAB)
-    ├── dashboard_screen.dart    # Pantalla de inicio con progreso diario
-    ├── agenda_screen.dart       # 🔄 Calendario mensual (Fase 3)
-    ├── stats_screen.dart        # ⏳ Estadísticas (Fase 4)
-    └── add_task_screen.dart     # 🔄 Formulario de nueva tarea (Fase 3)
-```
+### Perfil y Configuración
+- Personaliza tu experiencia. Toca el botón de cambiar Foto de Perfil o modifica tu nombre de usuario.
+- Activa o desactiva la paleta visual (Modo Oscuro/Claro).
+- Enciende o apaga por completo las notificaciones para que nada te moleste en tu tiempo libre.
 
 ---
 
-## 🎨 Paleta de Colores (Neón Oscuro)
+## 🛠️ Cómo Compilar y Ejecutar el Proyecto (Para Desarrolladores)
 
-| Rol | Color | Hex |
-|-----|-------|-----|
-| Fondo principal | Negro profundo | `#0D0D14` |
-| Fondo tarjetas | Azul noche | `#1A1A2E` |
-| Acento primario | Morado Neón | `#7C3AED` |
-| Acento secundario | Cian Brillante | `#06B6D4` |
-| Completado | Verde Neón | `#10B981` |
-| Higiene | Cian | `#06B6D4` |
-| Universidad | Morado | `#7C3AED` |
-| Trabajo | Ámbar | `#F59E0B` |
-| Compras | Verde | `#10B981` |
-| Ocio/Paseo | Rosa | `#EC4899` |
+El proyecto está diseñado exclusivamente para **Flutter**.
 
----
+### Prerrequisitos:
+- **Flutter SDK** instalado (Versión compatible probada >3.22.x).
+- **Dart SDK** (v3.x).
+- Emulador de Android o teléfono físico conectado vía USB/Wi-Fi (Depuración USB activada).
 
-## ⚙️ Cómo ejecutar el proyecto
-
-### Prerrequisitos
-- Flutter SDK instalado en `C:\src\flutter`
-- Android Studio instalado (para el Android SDK)
-- Modo Desarrollador de Windows activado
-
-### Comandos
-```bash
-# Instalar dependencias
-flutter pub get
-
-# Ejecutar en dispositivo conectado
-flutter run -d <device-id>
-
-# Ver dispositivos conectados
-flutter devices
-```
-
----
-
-## 🗺️ Plan de Desarrollo Detallado
-Ver archivo [PLAN_IMPLEMENTACION.md](./PLAN_IMPLEMENTACION.md) para el roadmap completo con todas las fases.
+### Pasos de Ejecución:
+1. **Clonar/Abrir el repositorio:** Abre la carpeta raíz del proyecto (`Proyecto-App-Rutine`) en tu editor preferido (VS Code, Android Studio, Cursor, etc).
+2. **Descargar Dependencias:**
+   Abre una terminal en la ruta del proyecto y ejecuta:
+   ```bash
+   flutter pub get
+   ```
+3. **Seleccionar un Dispositivo:**
+   Asegúrate de que tu celular está conectado usando:
+   ```bash
+   flutter devices
+   ```
+4. **Correr en Debug Mode:**
+   Ejecuta el siguiente comando o presiona `F5` en VSCode:
+   ```bash
+   flutter run
+   ```
+5. **Construir el Instalador (APK de Producción):**
+   Si deseas exportar la aplicación lista para ser instalada en cualquier teléfono Android y compartirla, debes generar un APK comprimido. Ejecuta:
+   ```bash
+   flutter build apk --release
+   ```
+   *Nota: El archivo final lo encontrarás guardado dentro de la ruta `build/app/outputs/flutter-apk/app-release.apk`.*
