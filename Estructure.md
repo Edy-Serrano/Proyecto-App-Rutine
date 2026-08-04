@@ -16,7 +16,7 @@ El punto de entrada de la aplicación. Configura la inicialización de los servi
 ### 📁 `models/`
 Contiene las clases y estructuras de datos puras que representan la información de negocio de la aplicación.
 
-* **`task_model.dart`**: Define la clase `Task` (identificador, título, descripción, fecha, hora, estado de completado, días de recurrencia y minutos de recordatorio). También aloja el enum `TaskCategory` con sus respectivas extensiones para obtener iconos, nombres y colores (Higiene, Universidad, Trabajo, Compras, Paseo, Deporte, Comida, Otro).
+* **`task_model.dart`**: Define la clase `Task` (identificador, título, descripción, fecha, hora, estado de completado, días de recurrencia, minutos de recordatorio, historial de tiempos `history` con `TimeLog`, y metadatos nutricionales `foodMetadata`). También aloja el enum `TaskCategory` con sus respectivas extensiones para obtener iconos, nombres y colores (Higiene, Universidad, Trabajo, Compras, Paseo, Deporte, Comida, Otro).
 
 ---
 
@@ -25,7 +25,7 @@ Controla el estado global y la lógica de negocio activa, comunicando los servic
 
 * **`task_provider.dart`**: El núcleo lógico de la app. Gestiona la lista en memoria de las tareas. Provee métodos para agregar, editar, eliminar y marcar tareas como completadas. Se encarga de:
   - Leer y escribir en `HiveService`.
-  - Calcular estadísticas dinámicas (rachas actuales, mejores rachas, % semanal y mensual).
+  - Calcular estadísticas dinámicas (rachas actuales, mejores rachas, progreso de completado, tiempo invertido por categoría `timeInvestedByCategory` y estadísticas nutricionales `foodStats`).
   - Programar, cancelar y reprogramar las notificaciones llamando a `NotificationService`.
 * **`theme_provider.dart`**: Controla el estado visual de la app y las preferencias de usuario. Gestiona la alternancia entre el **Modo Claro / Modo Oscuro** y el interruptor maestro de notificaciones, persistiendo estos valores mediante `HiveService`.
 
@@ -35,18 +35,18 @@ Controla el estado global y la lógica de negocio activa, comunicando los servic
 Contiene la Interfaz de Usuario (UI). Son los widgets (Stateful o Stateless) con los que interactúa el usuario directamente.
 
 * **`main_navigation.dart`**: Es el armazón base (Scaffold) que aloja la barra de navegación inferior (BottomNavigationBar) y controla qué pantalla se está mostrando actualmente.
-* **`dashboard_screen.dart`**: Pantalla de "Inicio". Muestra el saludo inicial (según la hora del día), el progreso circular del día actual y una lista de las tareas pendientes para hoy. Soporta interacciones táctiles completas (deslizar para completar/borrar, toque corto para detalles, toque largo para editar).
-* **`agenda_screen.dart`**: Vista de calendario. Usa un selector semanal deslizante. Permite ver las tareas asignadas a cualquier día en específico y también soporta acciones rápidas como marcar completado.
-* **`stats_screen.dart`**: Panel de métricas. Utiliza gráficos de barras y tarjetas analíticas para visualizar el rendimiento, progreso semanal, mensual, y rachas (streaks) de productividad.
+* **`dashboard_screen.dart`**: Pantalla de "Inicio". Muestra el saludo inicial (según la hora del día), la Frase del Día con gamificación para ganar rachas extra, el progreso circular del día actual y una lista de las tareas pendientes para hoy. Soporta interacciones táctiles completas (deslizar para completar/borrar, toque corto para detalles e historial de tiempo, toque largo para editar y posponer).
+* **`agenda_screen.dart`**: Vista de calendario. Usa un selector semanal deslizante. Permite ver las tareas asignadas a cualquier día en específico y también soporta acciones rápidas como marcar completado e interacciones para registro de tiempo.
+* **`stats_screen.dart`**: Panel de métricas. Utiliza un selector de fechas interactivo que muestra analíticas para la fecha elegida: "Tiempo invertido por categoría" con barras de progreso, y una subsección de "Nutrición de Hoy" (vasos de agua, proteínas, carbohidratos) para la categoría Comida, además de un resumen general de rachas.
 * **`profile_screen.dart`**: Pantalla de preferencias. Permite gestionar datos personales (nombre, foto de perfil), cambiar el modo visual (Claro/Oscuro), gestionar alertas locales y generar respaldos seguros de datos (cifrados con AES-256) exportables mediante share_plus.
-* **`add_task_sheet.dart`**: Es un `BottomSheet` dinámico y reutilizable que funge como formulario interactivo. Permite crear **nuevas tareas** o **editar tareas existentes**. Cuenta con selectores estilizados para categoría, calendario de fechas, selector de horas y minutos de recordatorio.
+* **`add_task_sheet.dart`**: Es un `BottomSheet` dinámico y reutilizable que funge como formulario interactivo. Permite crear **nuevas tareas**, **editar tareas existentes**, o **posponer** tareas a nuevas fechas registrando el tiempo ya invertido. Cuenta con selectores estilizados para categoría, calendario de fechas, horas, y un panel nutricional especializado (si la categoría es `Food`).
 
 ---
 
 ### 📁 `services/`
 Se encarga de la comunicación directa con APIs del sistema, bases de datos o servicios externos. Son clases estáticas o singletons que no manejan estado visual.
 
-* **`hive_service.dart`**: Inicializa la base de datos local utilizando cifrado nativo **AES-256** (cuya llave maestra se genera y guarda de forma segura con `flutter_secure_storage`). Provee la envoltura para leer/escribir las Tareas, preferencias de tema, notificaciones, imagen de perfil, nombre de usuario y funciones para exportar la base de datos de manera segura (`exportSecureBackup`).
+* **`hive_service.dart`**: Inicializa la base de datos local utilizando cifrado nativo **AES-256** (cuya llave maestra se genera y guarda de forma segura con `flutter_secure_storage`). Provee la envoltura para leer/escribir las Tareas, preferencias de tema, notificaciones, persistencia del chequeo de la Frase del Día y funciones para exportar/importar la base de datos de manera segura (`exportSecureBackup` / `importSecureBackup`).
 * **`notification_service.dart`**: Puente con el sistema operativo Android usando `flutter_local_notifications`. Gestiona los permisos iniciales, la inicialización de zonas horarias locales (Timezones) y la programación exacta de alarmas en segundo plano, así como su cancelación.
 
 ---
@@ -55,6 +55,20 @@ Se encarga de la comunicación directa con APIs del sistema, bases de datos o se
 Agrupa los tokens de diseño y configuraciones estéticas de la app.
 
 * **`app_theme.dart`**: Definición central de la identidad visual. Define paletas de colores (fondos, tarjetas, acentos Neón), estilos de tipografía base (Google Fonts `Outfit`), formas de botones, y configuraciones globales para el Tema Oscuro y el Tema Claro de Material 3.
+
+---
+
+### 📁 `utils/`
+Clases auxiliares y herramientas de cálculo global.
+
+* **`quotes_repository.dart`**: Maneja el banco de 366 frases de la aplicación y la lógica para obtener la frase correspondiente al día del año actual (incluso en años bisiestos), orientadas al crecimiento personal y a la asertividad.
+
+---
+
+### 📁 `widgets/`
+Componentes visuales reutilizables a lo largo de la aplicación.
+
+* **`time_log_dialog.dart`**: Un cuadro de diálogo estilizado (Dialog) que interrumpe gentilmente al usuario al completar una tarea preguntando cuánto tiempo invirtió en horas/minutos y permitiendo añadir una nota textual.
 
 ---
 

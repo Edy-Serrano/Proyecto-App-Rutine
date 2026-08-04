@@ -1,17 +1,17 @@
-# 📘 Rutine - Documentación General
+# Rutine - Documentación General
 
 Bienvenido a la documentación oficial de **Rutine**, tu gestor personal de tareas y rutinas diseñado bajo un concepto gamificado y una estética atractiva de temática oscura y luminosa.
 
 ---
 
-## 🎯 Propósito del Proyecto
+## Propósito del Proyecto
 Rutine nace para resolver el problema clásico de la falta de constancia al realizar tareas diarias. A diferencia de un simple bloc de notas, Rutine incentiva al usuario mostrándole gráficas de su rendimiento diario, semanal y mensual, además de un contador de **"Rachas" (Streaks)** para que mantenga su nivel de productividad en alto. 
 
 Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamente satisfactoria mediante micro-interacciones.
 
 ---
 
-## ✨ Funcionalidades Principales (Features)
+## Funcionalidades Principales (Features)
 
 1. **Gestión Integral de Tareas:**
    - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, etc).
@@ -22,17 +22,28 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
    - Alarmas exactas integradas nativamente en Android.
    - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu tarea (10, 15, 30 minutos, etc).
 
-3. **Gamificación y Estadísticas:**
-   - Panel de control principal con porcentaje de progreso en tiempo real del día.
-   - Sección interactiva de gráficas de barras para evaluar los últimos 7 días.
+3. **Gamificación y Estadísticas Interactivas:**
+   - Panel de control principal con porcentaje de progreso en tiempo real y **Frase del Día** motivacional, con botones para ganar rachas extras.
+   - Panel interactivo de estadísticas (`StatsScreen`) con selección por fechas para analizar:
+     - El **Tiempo Invertido** por cada categoría y porcentaje de tu tiempo productivo en el día.
+     - Gráficas y tarjetas dinámicas que te muestran tu progreso.
    - Contadores numéricos que premian los días perfectos consecutivos (Mejor Racha y Racha Actual).
 
-4. **Diseño Visual Dinámico:**
+4. **Registro de Tiempo y Postergación (Time Tracking):**
+   - Al marcar una tarea como completada, se te preguntará el tiempo que le has dedicado y si tienes una nota.
+   - Posibilidad de **Posponer** tareas a otro día desde el menú de edición, registrando el tiempo que le invertiste hoy sin perder el historial.
+   - Al tocar cualquier tarea, se despliega una ventana con todo su **Historial de Tiempos**.
+
+5. **Registro Nutricional Integrado:**
+   - Creación de tareas con la categoría **Comida** despliega un panel especial.
+   - Registra de forma sencilla tu consumo de vasos de agua, proteínas y carbohidratos, visualizándolo resumido en tu panel de estadísticas diario.
+
+6. **Diseño Visual Dinámico:**
    - Cambio fluido e instantáneo entre **Modo Claro** y **Modo Oscuro** que respeta la jerarquía de lectura del sistema.
    - Interacciones hápticas (vibración leve) al completar o desmarcar tareas.
    - Interfaces fluidas mediante uso de `BottomSheets` y `Dialogs` emergentes redondeados.
 
-5. **Persistencia Total Sin Internet (Offline First):**
+7. **Persistencia Total Sin Internet (Offline First):**
    - Tus datos y configuraciones personales viajan contigo de forma local gracias a la integración nativa y ligera de `Hive Database`.
 
 ---
@@ -41,9 +52,10 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ### Pantalla de Inicio (Dashboard)
 - Es lo primero que ves al abrir la app. Se enfoca exclusivamente en **tu día de hoy**.
-- **Completar tarea:** Simplemente toca el círculo (checkbox) o desliza (swipe) la tarea de izquierda a derecha. ¡Verás una luz verde!
-- **Ver Detalles:** Toca la tarjeta de la tarea (sobre el texto) para leer su descripción completa en una elegante ventana.
-- **Editar Tarea:** Mantén presionada cualquier tarea que necesites modificar.
+- **Frase del Día:** Empieza el día con una frase motivacional de asertividad. Pulsa en "¿Pusiste a prueba la frase?" para ganar un bono en tu racha.
+- **Completar tarea:** Simplemente toca el círculo (checkbox) o desliza (swipe) la tarea de izquierda a derecha. ¡Aparecerá un menú preguntándote cuánto tiempo le dedicaste hoy!
+- **Ver Detalles:** Toca la tarjeta de la tarea (sobre el texto) para leer su descripción completa y ver todo su **Historial de Tiempo (Timeline)** acumulado.
+- **Editar o Posponer:** Mantén presionada cualquier tarea que necesites modificar. Si hoy no la terminaste, usa el botón "Posponer a otro día" para registrar el avance de hoy y cambiar su fecha sin perder su historial.
 - **Borrar Tarea:** Desliza (swipe) una tarea completamente hacia la izquierda. (¡Cuidado, esta acción no se puede deshacer!).
 
 ### Agenda (Calendario Semanal)
@@ -52,7 +64,10 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ### Panel de Estadísticas (Stats)
 - Toca el ícono de gráfica en la barra inferior.
-- Monitorea tus gráficas y compite contigo mismo para lograr la "Mejor Racha Histórica" de días en donde marcaste el 100% de tus rutinas.
+- Selecciona el **Día** que quieres evaluar usando las flechas superiores.
+- Visualiza el tiempo exacto (en horas y minutos) que invertiste en cada categoría.
+- Si registraste tareas de la categoría **Comida**, verás aquí mismo una tarjeta con la recopilación de tu consumo de macros (Agua, Proteínas y Carbohidratos).
+- Compite contigo mismo para lograr la "Mejor Racha Histórica".
 
 ### Perfil y Configuración
 - Personaliza tu experiencia. Toca el botón de cambiar Foto de Perfil o modifica tu nombre de usuario.
@@ -61,7 +76,7 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ---
 
-## 🛠️ Cómo Compilar y Ejecutar el Proyecto (Para Desarrolladores)
+## Cómo Compilar y Ejecutar el Proyecto (Para Desarrolladores)
 
 El proyecto está diseñado exclusivamente para **Flutter**.
 
