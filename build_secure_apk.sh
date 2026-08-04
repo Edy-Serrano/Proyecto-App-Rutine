@@ -17,6 +17,6 @@ flutter build apk --release --obfuscate --split-debug-info=build/app/outputs/sym
 
 echo ""
 echo "===================================================="
-echo " ✅ APK Seguro Generado Exitosamente"
+echo " APK Seguro Generado Exitosamente"
 echo " Ruta: build/app/outputs/flutter-apk/app-release.apk"
 echo "===================================================="

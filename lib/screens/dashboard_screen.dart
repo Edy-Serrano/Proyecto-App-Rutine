@@ -5,6 +5,9 @@ import 'package:rutine/providers/task_provider.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter/services.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
+import 'package:rutine/utils/quotes_repository.dart';
+import 'package:rutine/services/hive_service.dart';
+import 'package:rutine/widgets/time_log_dialog.dart';
 
 class DashboardScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -84,6 +87,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 20),
+
+                  // === FRASE DEL DÍA ===
+                  _buildQuoteCard(context),
+
                   const SizedBox(height: 20),
 
                   // === TARJETA DE PROGRESO DEL DÍA ===
@@ -311,6 +319,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
             GestureDetector(
               onTap: () async {
                 if (!task.isCompleted) {
+                  final result = await showDialog<Map<String, dynamic>>(
+                    context: context,
+                    builder: (context) => TimeLogDialog(title: '¡Tarea completada!'),
+                  );
+                  
+                  if (result != null) {
+                    final minutes = result['minutes'] as int;
+                    final note = result['note'] as String;
+                    if (minutes > 0 || note.isNotEmpty) {
+                      await provider.addTimeLog(
+                        task.id,
+                        TimeLog(date: DateTime.now(), minutes: minutes, note: note),
+                      );
+                    }
+                  }
+                  
                   await provider.toggleTaskCompletion(task.id);
                   if (mounted) setState(() {});
                 }
@@ -399,6 +423,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
   void _showTaskDetails(BuildContext context, Task task) {
+    int totalMinutes = 0;
+    for (var log in task.history) {
+      totalMinutes += log.minutes;
+    }
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -411,14 +440,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Expanded(child: Text(task.title, style: TextStyle(color: AppTheme.textPrimary))),
           ],
         ),
-        content: Text(
-          task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
-          style: TextStyle(color: AppTheme.textSecondary),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+              if (task.history.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Divider(color: AppTheme.bgSurface),
+                const SizedBox(height: 8),
+                const Text('Historial de Tiempo:', style: TextStyle(color: AppTheme.neonCyan, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...task.history.map((log) {
+                  const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+                  final dayStr = days[log.date.weekday - 1];
+                  final timeStr = log.minutes >= 60 
+                      ? '${log.minutes ~/ 60}h ${log.minutes % 60}m' 
+                      : '${log.minutes}m';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      '$dayStr: $timeStr - "${log.note.isNotEmpty ? log.note : 'Sin nota'}"',
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 8),
+                Text(
+                  'Total Invertido: ${totalMinutes >= 60 ? '${totalMinutes ~/ 60}h ${totalMinutes % 60}m' : '${totalMinutes}m'}',
+                  style: const TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
+            child: const Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
           ),
         ],
       ),
@@ -434,5 +497,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ];
     return '${days[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]} de ${date.year}';
+  }
+
+  Widget _buildQuoteCard(BuildContext context) {
+    final now = DateTime.now();
+    final quote = QuotesRepository.getDailyQuote();
+    final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
+    final hasChecked = HiveService.getHasCheckedQuoteToday(dateStr);
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.neonCyan.withOpacity(0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.format_quote_rounded, color: AppTheme.neonCyan),
+              const SizedBox(width: 8),
+              Text(
+                'Frase del Día',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.neonCyan),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '"$quote"',
+            style: TextStyle(color: AppTheme.textPrimary, fontStyle: FontStyle.italic, fontSize: 14),
+          ),
+          const SizedBox(height: 16),
+          if (!hasChecked)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () async {
+                  await HiveService.setHasCheckedQuoteToday(dateStr, true);
+                  // widget.provider.incrementStreakWithQuoteBonus(); // if exists
+                  setState(() {});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('¡Excelente! Has ganado un bonus de racha. 🔥')),
+                  );
+                },
+                icon: const Icon(Icons.check_circle_outline, color: Colors.black),
+                label: const Text('¿Pusiste a prueba la frase?', style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.neonCyan,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            )
+          else
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.local_fire_department_rounded, color: AppTheme.neonPink, size: 20),
+                const SizedBox(width: 8),
+                const Text('¡Frase superada hoy!', style: TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold)),
+              ],
+            ),
+        ],
+      ),
+    );
   }
 }

@@ -123,6 +123,57 @@ class TaskProvider extends ChangeNotifier {
     return best;
   }
 
+  Map<TaskCategory, int> timeInvestedByCategory(DateTime date) {
+    final Map<TaskCategory, int> result = {};
+    for (var cat in TaskCategory.values) {
+      result[cat] = 0;
+    }
+    for (var task in _tasks) {
+      for (var log in task.history) {
+        if (log.date.year == date.year && log.date.month == date.month && log.date.day == date.day) {
+          result[task.category] = (result[task.category] ?? 0) + log.minutes;
+        }
+      }
+    }
+    result.removeWhere((key, value) => value == 0);
+    return result;
+  }
+
+  int totalTimeInvested(DateTime date) {
+    int total = 0;
+    for (var task in _tasks) {
+      for (var log in task.history) {
+        if (log.date.year == date.year && log.date.month == date.month && log.date.day == date.day) {
+          total += log.minutes;
+        }
+      }
+    }
+    return total;
+  }
+
+  Map<String, int> foodStats(DateTime date) {
+    int water = 0;
+    int protein = 0;
+    int carbs = 0;
+    
+    for (var task in _tasks) {
+      if (task.category == TaskCategory.food && task.foodMetadata != null && task.isCompleted) {
+        // we can check if it was completed on the selected date by looking at the history logs,
+        // or just by date. Since tasks are not specifically tied to date in terms of completion, 
+        // we check if it has a log in that date, or if its `date` field is that date.
+        bool hasLog = task.history.any((log) => 
+            log.date.year == date.year && log.date.month == date.month && log.date.day == date.day);
+            
+        if (hasLog || (task.date.year == date.year && task.date.month == date.month && task.date.day == date.day)) {
+          water += task.foodMetadata!['water'] as int? ?? 0;
+          protein += task.foodMetadata!['protein'] as int? ?? 0;
+          carbs += task.foodMetadata!['carbs'] as int? ?? 0;
+        }
+      }
+    }
+    return {'water': water, 'protein': protein, 'carbs': carbs};
+  }
+
   /// Completadas por categoría (para el pie chart)
   Map<TaskCategory, int> completedByCategory() {
     final map = <TaskCategory, int>{};
@@ -184,6 +235,15 @@ class TaskProvider extends ChangeNotifier {
     await HiveService.addTask(task);
     _scheduleNotificationIfNeeded(task);
     notifyListeners();
+  }
+
+  Future<void> addTimeLog(String id, TimeLog log) async {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      _tasks[index].history.add(log);
+      await HiveService.saveTasks(_tasks);
+      notifyListeners();
+    }
   }
 
   Future<void> toggleTaskCompletion(String taskId) async {

@@ -5,6 +5,7 @@ import 'package:rutine/providers/task_provider.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter/services.dart';
+import 'package:rutine/widgets/time_log_dialog.dart';
 
 class AgendaScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -279,8 +280,26 @@ class _AgendaScreenState extends State<AgendaScreen> {
         children: [
           GestureDetector(
             onTap: () async {
-              await widget.provider.toggleTaskCompletion(task.id);
-              if (mounted) setState(() {});
+              if (!task.isCompleted) {
+                final result = await showDialog<Map<String, dynamic>>(
+                  context: context,
+                  builder: (context) => TimeLogDialog(title: '¡Tarea completada!'),
+                );
+                
+                if (result != null) {
+                  final minutes = result['minutes'] as int;
+                  final note = result['note'] as String;
+                  if (minutes > 0 || note.isNotEmpty) {
+                    await widget.provider.addTimeLog(
+                      task.id,
+                      TimeLog(date: DateTime.now(), minutes: minutes, note: note),
+                    );
+                  }
+                }
+                
+                await widget.provider.toggleTaskCompletion(task.id);
+                if (mounted) setState(() {});
+              }
             },
             onLongPress: () async {
               if (task.isCompleted) {
@@ -383,6 +402,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
   void _showTaskDetails(BuildContext context, Task task) {
+    int totalMinutes = 0;
+    for (var log in task.history) {
+      totalMinutes += log.minutes;
+    }
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -395,14 +419,48 @@ class _AgendaScreenState extends State<AgendaScreen> {
             Expanded(child: Text(task.title, style: TextStyle(color: AppTheme.textPrimary))),
           ],
         ),
-        content: Text(
-          task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
-          style: TextStyle(color: AppTheme.textSecondary),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+              if (task.history.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Divider(color: AppTheme.bgSurface),
+                const SizedBox(height: 8),
+                const Text('Historial de Tiempo:', style: TextStyle(color: AppTheme.neonCyan, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ...task.history.map((log) {
+                  const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+                  final dayStr = days[log.date.weekday - 1];
+                  final timeStr = log.minutes >= 60 
+                      ? '${log.minutes ~/ 60}h ${log.minutes % 60}m' 
+                      : '${log.minutes}m';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8.0),
+                    child: Text(
+                      '$dayStr: $timeStr - "${log.note.isNotEmpty ? log.note : 'Sin nota'}"',
+                      style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
+                    ),
+                  );
+                }).toList(),
+                const SizedBox(height: 8),
+                Text(
+                  'Total Invertido: ${totalMinutes >= 60 ? '${totalMinutes ~/ 60}h ${totalMinutes % 60}m' : '${totalMinutes}m'}',
+                  style: const TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
+            child: const Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
           ),
         ],
       ),

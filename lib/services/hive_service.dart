@@ -135,6 +135,14 @@ class HiveService {
     await _prefsBox.put('notificationsEnabled', enabled);
   }
 
+  static bool getHasCheckedQuoteToday(String dateStr) {
+    return _prefsBox.get('checkedQuote_$dateStr', defaultValue: false);
+  }
+
+  static Future<void> setHasCheckedQuoteToday(String dateStr, bool checked) async {
+    await _prefsBox.put('checkedQuote_$dateStr', checked);
+  }
+
   // ─── BACKUP Y SEGURIDAD ───────────────────────────────────────────────────
 
   static Future<File> exportSecureBackup() async {
@@ -155,5 +163,23 @@ class HiveService {
     await file.writeAsString(backupData);
     
     return file;
+  }
+
+  static Future<void> importSecureBackup(File file) async {
+    final backupData = await file.readAsString();
+    final parts = backupData.split(':');
+    if (parts.length != 2) throw Exception("Formato de backup inválido");
+    
+    final iv = enc.IV.fromBase64(parts[0]);
+    final encryptedData = enc.Encrypted.fromBase64(parts[1]);
+    final key = enc.Key(_encryptionKey);
+    
+    final encrypter = enc.Encrypter(enc.AES(key));
+    final decryptedStr = encrypter.decrypt(encryptedData, iv: iv);
+    
+    final List<dynamic> jsonList = jsonDecode(decryptedStr);
+    final tasks = jsonList.map((map) => Task.fromMap(map as Map<dynamic, dynamic>)).toList();
+    
+    await saveTasks(tasks);
   }
 }

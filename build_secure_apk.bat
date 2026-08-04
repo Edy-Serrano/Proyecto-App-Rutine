@@ -16,7 +16,7 @@ call flutter build apk --release --obfuscate --split-debug-info=build/app/output
 
 echo.
 echo ====================================================
-echo  ✅ APK Seguro Generado Exitosamente
+echo  APK Seguro Generado Exitosamente
 echo  Ruta: build\app\outputs\flutter-apk\app-release.apk
 echo ====================================================
 pause

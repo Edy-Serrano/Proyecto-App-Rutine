@@ -44,6 +44,30 @@ extension TaskCategoryExtension on TaskCategory {
   }
 }
 
+class TimeLog {
+  final DateTime date;
+  final int minutes;
+  final String note;
+
+  TimeLog({required this.date, required this.minutes, this.note = ''});
+
+  Map<String, dynamic> toMap() {
+    return {
+      'date': date.toIso8601String(),
+      'minutes': minutes,
+      'note': note,
+    };
+  }
+
+  factory TimeLog.fromMap(Map<dynamic, dynamic> map) {
+    return TimeLog(
+      date: DateTime.parse(map['date'] as String),
+      minutes: map['minutes'] as int,
+      note: map['note'] as String? ?? '',
+    );
+  }
+}
+
 class Task {
   final String id;
   String title;
@@ -55,6 +79,8 @@ class Task {
   bool isRecurring;
   List<int> recurringDays; // 1=Lunes, 7=Domingo (basado en weekday de DateTime)
   int? notificationMinutes;
+  List<TimeLog> history;
+  Map<String, dynamic>? foodMetadata;
 
   Task({
     required this.id,
@@ -67,7 +93,9 @@ class Task {
     this.isRecurring = false,
     this.recurringDays = const [],
     this.notificationMinutes,
-  });
+    List<TimeLog>? history,
+    this.foodMetadata,
+  }) : history = history ?? [];
 
   Task copyWith({
     String? id,
@@ -80,6 +108,8 @@ class Task {
     bool? isRecurring,
     List<int>? recurringDays,
     int? notificationMinutes,
+    List<TimeLog>? history,
+    Map<String, dynamic>? foodMetadata,
   }) {
     return Task(
       id: id ?? this.id,
@@ -92,6 +122,8 @@ class Task {
       isRecurring: isRecurring ?? this.isRecurring,
       recurringDays: recurringDays ?? this.recurringDays,
       notificationMinutes: notificationMinutes ?? this.notificationMinutes,
+      history: history ?? this.history,
+      foodMetadata: foodMetadata ?? this.foodMetadata,
     );
   }
 
@@ -108,6 +140,8 @@ class Task {
       'isRecurring': isRecurring,
       'recurringDays': recurringDays,
       'notificationMinutes': notificationMinutes,
+      'history': history.map((e) => e.toMap()).toList(),
+      'foodMetadata': foodMetadata,
     };
   }
 
@@ -127,6 +161,8 @@ class Task {
       isRecurring: map['isRecurring'] as bool? ?? false,
       recurringDays: (map['recurringDays'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [],
       notificationMinutes: map['notificationMinutes'] as int?,
+      history: (map['history'] as List<dynamic>?)?.map((e) => TimeLog.fromMap(e as Map<dynamic, dynamic>)).toList() ?? [],
+      foodMetadata: map['foodMetadata'] != null ? Map<String, dynamic>.from(map['foodMetadata'] as Map) : null,
     );
   }
 }

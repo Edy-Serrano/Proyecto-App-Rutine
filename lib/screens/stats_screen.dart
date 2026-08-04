@@ -4,36 +4,97 @@ import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/models/task_model.dart';
 import 'package:rutine/providers/task_provider.dart';
 
-class StatsScreen extends StatelessWidget {
+class StatsScreen extends StatefulWidget {
   final TaskProvider provider;
   const StatsScreen({super.key, required this.provider});
 
   @override
+  State<StatsScreen> createState() => _StatsScreenState();
+}
+
+class _StatsScreenState extends State<StatsScreen> {
+  DateTime _selectedDate = DateTime.now();
+
+  @override
   Widget build(BuildContext context) {
-    final weeklyRate = provider.weeklyCompletionRate();
-    final monthlyRate = provider.monthlyCompletionRate();
-    final streak = provider.currentStreak;
-    final bestStreak = provider.bestStreak;
-    final last7 = provider.getLast7DaysStats();
-    final byCategory = provider.completedByCategory();
-    final totalByCategory = provider.totalByCategory();
+    final weeklyRate = widget.provider.weeklyCompletionRate();
+    final monthlyRate = widget.provider.monthlyCompletionRate();
+    final streak = widget.provider.currentStreak;
+    final bestStreak = widget.provider.bestStreak;
+    final last7 = widget.provider.getLast7DaysStats();
     
-    final byTaskName = provider.completedByTaskName();
-    final totalByTaskName = provider.totalByTaskName();
+    // Tareas completadas (para el pie chart global si se desea, o lo cambiamos a tiempo)
+    final byCategory = widget.provider.completedByCategory();
+    
+    // TIEMPO INVERTIDO
+    final timeInvested = widget.provider.timeInvestedByCategory(_selectedDate);
+    final totalTime = widget.provider.totalTimeInvested(_selectedDate);
+    
+    // ESTADÍSTICAS FOOD
+    final foodData = widget.provider.foodStats(_selectedDate);
+    
+    final byTaskName = widget.provider.completedByTaskName();
+    final totalByTaskName = widget.provider.totalByTaskName();
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
       appBar: AppBar(
         title: const Text('Estadísticas'),
         backgroundColor: AppTheme.bgDark,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.today_rounded, color: AppTheme.neonCyan),
+            onPressed: () => setState(() => _selectedDate = DateTime.now()),
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // === SELECTOR DE FECHA ===
+            _buildDateSelector(),
+            const SizedBox(height: 20),
+
+            // === TIEMPO INVERTIDO POR CATEGORÍA (Día Seleccionado) ===
+            _buildSectionTitle(context, '⏳ Tiempo invertido hoy'),
+            const SizedBox(height: 8),
+            Text(
+              'Total: ${totalTime >= 60 ? '${totalTime ~/ 60}h ${totalTime % 60}m' : '${totalTime}m'}',
+              style: const TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 12),
+            if (timeInvested.isEmpty)
+              Text('No hay tiempo registrado para este día.', style: TextStyle(color: AppTheme.textMuted))
+            else
+              ...timeInvested.entries.map((entry) {
+                return _buildTimeInvestedRow(context, entry.key, entry.value, totalTime);
+              }),
+            const SizedBox(height: 32),
+
+            // === ESTADÍSTICAS DE NUTRICIÓN (FOOD) ===
+            _buildSectionTitle(context, '🥗 Nutrición de Hoy'),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFoodStatCard(context, 'Agua', '${foodData['water']} vasos', Icons.water_drop_rounded, AppTheme.neonCyan),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildFoodStatCard(context, 'Proteínas', '${foodData['protein']}g', Icons.fitness_center_rounded, AppTheme.neonPink),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildFoodStatCard(context, 'Carbs', '${foodData['carbs']}g', Icons.breakfast_dining_rounded, AppTheme.catFood),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+
             // === TARJETAS DE RESUMEN ===
-            _buildSectionTitle(context, '📈 Resumen'),
+            _buildSectionTitle(context, '📈 Resumen Semanal/Mensual'),
             const SizedBox(height: 12),
             Row(
               children: [
@@ -88,27 +149,6 @@ class StatsScreen extends StatelessWidget {
             ),
             const SizedBox(height: 28),
 
-            // === GRÁFICO DE BARRAS (últimos 7 días) ===
-            _buildSectionTitle(context, '📊 Últimos 7 días'),
-            const SizedBox(height: 16),
-            _buildBarChart(context, last7),
-            const SizedBox(height: 28),
-
-            // === MENSAJE MOTIVACIONAL ===
-            _buildMotivationalCard(context, streak, weeklyRate),
-            const SizedBox(height: 28),
-
-            // === PROGRESO POR CATEGORÍA ===
-            _buildSectionTitle(context, '🏷️ Por categoría'),
-            const SizedBox(height: 12),
-            ...TaskCategory.values.map((cat) {
-              final completed = byCategory[cat] ?? 0;
-              final total = totalByCategory[cat] ?? 0;
-              if (total == 0) return const SizedBox.shrink();
-              return _buildCategoryRow(context, cat, completed, total);
-            }),
-
-            const SizedBox(height: 28),
             // === PROGRESO POR TAREA ESPECÍFICA ===
             _buildSectionTitle(context, '🎯 Por tarea específica'),
             const SizedBox(height: 12),
@@ -133,6 +173,104 @@ class StatsScreen extends StatelessWidget {
             const SizedBox(height: 80),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDateSelector() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: Icon(Icons.chevron_left_rounded, color: AppTheme.textSecondary),
+          onPressed: () => setState(() => _selectedDate = _selectedDate.subtract(const Duration(days: 1))),
+        ),
+        Text(
+          _formattedDate(_selectedDate),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.textPrimary),
+        ),
+        IconButton(
+          icon: Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
+          onPressed: () => setState(() => _selectedDate = _selectedDate.add(const Duration(days: 1))),
+        ),
+      ],
+    );
+  }
+
+  String _formattedDate(DateTime date) {
+    const months = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    if (date.year == DateTime.now().year && date.month == DateTime.now().month && date.day == DateTime.now().day) {
+      return 'Hoy';
+    }
+    return '${date.day} ${months[date.month - 1]} ${date.year}';
+  }
+
+  Widget _buildTimeInvestedRow(BuildContext context, TaskCategory cat, int minutes, int totalMinutes) {
+    final rate = totalMinutes == 0 ? 0.0 : minutes / totalMinutes;
+    final timeStr = minutes >= 60 ? '${minutes ~/ 60}h ${minutes % 60}m' : '${minutes}m';
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(cat.icon, color: cat.color, size: 16),
+                  const SizedBox(width: 8),
+                  Text(cat.label, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppTheme.textPrimary)),
+                ],
+              ),
+              Text(timeStr, style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: cat.color, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: rate,
+              backgroundColor: AppTheme.bgSurface,
+              valueColor: AlwaysStoppedAnimation<Color>(cat.color),
+              minHeight: 6,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFoodStatCard(BuildContext context, String label, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(color: AppTheme.textSecondary, fontSize: 12),
+          ),
+        ],
       ),
     );
   }
@@ -200,219 +338,6 @@ class StatsScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildBarChart(BuildContext context, List<DailyStats> stats) {
-    const dayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
-    return Container(
-      height: 200,
-      padding: const EdgeInsets.fromLTRB(8, 16, 16, 8),
-      decoration: BoxDecoration(
-        color: AppTheme.bgCard,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppTheme.neonPurple.withOpacity(0.15)),
-      ),
-      child: BarChart(
-        BarChartData(
-          maxY: 1.0,
-          minY: 0,
-          barTouchData: BarTouchData(
-            touchTooltipData: BarTouchTooltipData(
-              getTooltipColor: (_) => AppTheme.bgSurface,
-              getTooltipItem: (group, groupIndex, rod, rodIndex) {
-                final s = stats[groupIndex];
-                return BarTooltipItem(
-                  '${(s.completionRate * 100).toInt()}%\n${s.completedTasks}/${s.totalTasks}',
-                  TextStyle(
-                      color: AppTheme.textPrimary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600),
-                );
-              },
-            ),
-          ),
-          titlesData: FlTitlesData(
-            bottomTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                getTitlesWidget: (value, meta) {
-                  final idx = value.toInt();
-                  if (idx < 0 || idx >= stats.length) return const SizedBox();
-                  final weekday = stats[idx].date.weekday - 1;
-                  final isToday = _isSameDay(stats[idx].date, DateTime.now());
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 6),
-                    child: Text(
-                      dayLabels[weekday],
-                      style: TextStyle(
-                        color: isToday
-                            ? AppTheme.neonPurple
-                            : AppTheme.textMuted,
-                        fontSize: 11,
-                        fontWeight:
-                            isToday ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            leftTitles: AxisTitles(
-              sideTitles: SideTitles(
-                showTitles: true,
-                reservedSize: 32,
-                getTitlesWidget: (value, meta) {
-                  if (value == 0 || value == 0.5 || value == 1.0) {
-                    return Text(
-                      '${(value * 100).toInt()}%',
-                      style: TextStyle(
-                          color: AppTheme.textMuted, fontSize: 9),
-                    );
-                  }
-                  return const SizedBox();
-                },
-              ),
-            ),
-            topTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-            rightTitles:
-                const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          ),
-          gridData: FlGridData(
-            show: true,
-            drawVerticalLine: false,
-            getDrawingHorizontalLine: (_) => FlLine(
-              color: AppTheme.textMuted.withOpacity(0.1),
-              strokeWidth: 1,
-            ),
-          ),
-          borderData: FlBorderData(show: false),
-          barGroups: List.generate(stats.length, (i) {
-            final s = stats[i];
-            final isToday = _isSameDay(s.date, DateTime.now());
-            return BarChartGroupData(
-              x: i,
-              barRods: [
-                BarChartRodData(
-                  toY: s.totalTasks == 0 ? 0 : s.completionRate,
-                  width: 22,
-                  borderRadius: const BorderRadius.vertical(
-                      top: Radius.circular(8)),
-                  gradient: LinearGradient(
-                    colors: s.completionRate == 1.0
-                        ? [AppTheme.neonGreen, AppTheme.neonCyan]
-                        : isToday
-                            ? [AppTheme.neonPurple, AppTheme.neonCyan]
-                            : [
-                                AppTheme.neonPurple.withOpacity(0.6),
-                                AppTheme.neonPurple.withOpacity(0.3)
-                              ],
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                  ),
-                  backDrawRodData: BackgroundBarChartRodData(
-                    show: true,
-                    toY: 1,
-                    color: AppTheme.bgSurface,
-                  ),
-                ),
-              ],
-            );
-          }),
-        ),
-        duration: const Duration(milliseconds: 600),
-        curve: Curves.easeInOut,
-      ),
-    );
-  }
-
-  Widget _buildMotivationalCard(
-      BuildContext context, int streak, double weeklyRate) {
-    String message;
-    IconData icon;
-    Color color;
-
-    if (streak >= 7) {
-      message = '¡Increíble! Llevas $streak días seguidos completando tus tareas. ¡Eres imparable! 🔥';
-      icon = Icons.local_fire_department_rounded;
-      color = AppTheme.neonPink;
-    } else if (streak >= 3) {
-      message = '¡Vas muy bien! $streak días en racha. ¡Mantén el ritmo! 💪';
-      icon = Icons.trending_up_rounded;
-      color = AppTheme.neonCyan;
-    } else if (weeklyRate >= 0.7) {
-      message = 'Esta semana has completado el ${(weeklyRate * 100).toInt()}% de tus tareas. ¡Excelente rendimiento! ⭐';
-      icon = Icons.star_rounded;
-      color = AppTheme.catWork;
-    } else if (weeklyRate > 0) {
-      message = 'Sigue adelante, cada tarea completada cuenta. ¡Tú puedes! 🚀';
-      icon = Icons.rocket_launch_rounded;
-      color = AppTheme.neonPurple;
-    } else {
-      message = '¡Bienvenido! Empieza a registrar tus tareas para ver tus estadísticas aquí. ✨';
-      icon = Icons.lightbulb_rounded;
-      color = AppTheme.neonCyan;
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [color.withOpacity(0.15), AppTheme.bgCard],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3)),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 36),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Text(
-              message,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textPrimary,
-                    height: 1.4,
-                  ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCategoryRow(
-      BuildContext context, TaskCategory cat, int completed, int total) {
-    final rate = total == 0 ? 0.0 : completed / total;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(cat.icon, color: cat.color, size: 16),
-                  const SizedBox(width: 8),
-                  Text(cat.label,
-                      style: Theme.of(context)
-                          .textTheme
-                          .bodyMedium
-                          ?.copyWith(color: AppTheme.textPrimary)),
-                ],
-              ),
-              Text(
-                '$completed / $total',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: cat.color,
-                      fontWeight: FontWeight.w600,
-                    ),
-              ),
-            ],
-          ),
           const SizedBox(height: 6),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),

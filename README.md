@@ -100,5 +100,5 @@ El proyecto está diseñado exclusivamente para **Flutter**.
 ## Arquitectura de Ciberseguridad Integrada
 Rutine incluye un sólido protocolo de seguridad (implementado en la Fase de Seguridad):
 1. **Encriptación de Base de Datos:** Todos los datos en reposo guardados por `Hive` están cifrados usando **AES-256**, con una llave criptográfica maestra generada y almacenada en el hardware (`Keystore` usando `flutter_secure_storage`).
-2. **Backups Seguros:** Al solicitar una Copia de Seguridad desde el Perfil, Rutine genera un archivo cifrado (`.enc`) usando encriptación simétrica. El backup es exportado usando el sistema nativo de tu teléfono (vía `share_plus`), asegurando que nadie pueda interceptar o leer tus datos si el archivo cae en manos equivocadas.
+2. **Backups Seguros:** Al solicitar una Copia de Seguridad desde el Perfil, Rutine genera un archivo cifrado (`.enc`) usando encriptación simétrica. El backup es exportado usando el sistema nativo de tu teléfono (vía `share_plus`), asegurando que nadie pueda interceptar o leer tus datos si el archivo cae en manos equivocadas. Además, puedes **importar** estos archivos de forma segura para restaurar tus rutinas.
 3. **Resistencia a Ingeniería Inversa:** El uso de `--obfuscate` al compilar asegura que las estructuras de datos, llaves de API, y lógica interna se transformen en código máquina (ARM) ilegible.

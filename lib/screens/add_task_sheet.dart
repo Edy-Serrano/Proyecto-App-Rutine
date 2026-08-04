@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/models/task_model.dart';
 import 'package:rutine/providers/task_provider.dart';
+import 'package:rutine/widgets/time_log_dialog.dart';
 
 class AddTaskSheet extends StatefulWidget {
   final TaskProvider provider;
@@ -24,6 +25,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   final Set<int> _recurringDays = {}; // 1=Lun ... 7=Dom
   final _notifController = TextEditingController();
 
+  // Nutrición
+  int _waterGlasses = 0;
+  int _proteinGrams = 0;
+  int _carbsGrams = 0;
+
   static const List<String> _dayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   @override
@@ -40,6 +46,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       _recurringDays.addAll(t.recurringDays);
       if (t.notificationMinutes != null) {
         _notifController.text = t.notificationMinutes.toString();
+      }
+      if (t.foodMetadata != null) {
+        _waterGlasses = t.foodMetadata!['water'] as int? ?? 0;
+        _proteinGrams = t.foodMetadata!['protein'] as int? ?? 0;
+        _carbsGrams = t.foodMetadata!['carbs'] as int? ?? 0;
       }
     } else if (widget.initialDate != null) {
       _selectedDate = widget.initialDate!;
@@ -78,6 +89,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         isRecurring: _isRecurring,
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
         notificationMinutes: notifMins,
+        foodMetadata: _selectedCategory == TaskCategory.food ? {
+          'water': _waterGlasses,
+          'protein': _proteinGrams,
+          'carbs': _carbsGrams,
+        } : null,
       );
       widget.provider.updateTask(updated);
     } else {
@@ -91,6 +107,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         isRecurring: _isRecurring,
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
         notificationMinutes: notifMins,
+        foodMetadata: _selectedCategory == TaskCategory.food ? {
+          'water': _waterGlasses,
+          'protein': _proteinGrams,
+          'carbs': _carbsGrams,
+        } : null,
       );
       widget.provider.addTask(task);
     }
@@ -250,6 +271,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             ),
             const SizedBox(height: 28),
 
+            // === SECCIÓN FOOD ===
+            if (_selectedCategory == TaskCategory.food) ...[
+              _buildFoodSection(),
+              const SizedBox(height: 28),
+            ],
+
             // === BOTÓN GUARDAR ===
             SizedBox(
               width: double.infinity,
@@ -284,6 +311,22 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                 ),
               ),
             ),
+            if (widget.taskToEdit != null) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 54,
+                child: TextButton.icon(
+                  onPressed: _postponeTask,
+                  icon: const Icon(Icons.next_plan_rounded, color: AppTheme.neonCyan),
+                  label: const Text('Posponer a otro día', style: TextStyle(color: AppTheme.neonCyan, fontWeight: FontWeight.bold)),
+                  style: TextButton.styleFrom(
+                    backgroundColor: AppTheme.neonCyan.withOpacity(0.1),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -486,11 +529,108 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     );
   }
 
+  Widget _buildFoodSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Información Nutricional',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.catFood)),
+        const SizedBox(height: 12),
+        _buildCounter('Vasos de Agua', _waterGlasses, (v) => setState(() => _waterGlasses = v)),
+        const SizedBox(height: 12),
+        _buildCounter('Proteínas (g)', _proteinGrams, (v) => setState(() => _proteinGrams = v), step: 5),
+        const SizedBox(height: 12),
+        _buildCounter('Carbohidratos (g)', _carbsGrams, (v) => setState(() => _carbsGrams = v), step: 5),
+      ],
+    );
+  }
+
+  Widget _buildCounter(String label, int value, ValueChanged<int> onChanged, {int step = 1}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+        Row(
+          children: [
+            IconButton(
+              icon: Icon(Icons.remove_circle_outline, color: AppTheme.textMuted),
+              onPressed: value > 0 ? () => onChanged(value - step < 0 ? 0 : value - step) : null,
+            ),
+            SizedBox(
+              width: 40,
+              child: Text(
+                '$value',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_circle_outline, color: AppTheme.textMuted),
+              onPressed: () => onChanged(value + step),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
   String _formatDate(DateTime d) {
     const months = [
       'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
     ];
     return '${d.day} ${months[d.month - 1]} ${d.year}';
+  }
+
+  Future<void> _postponeTask() async {
+    final DateTime? newDate = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate.add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(
+          data: ThemeData.dark().copyWith(
+            colorScheme: ColorScheme.dark(
+              primary: AppTheme.neonCyan,
+              onPrimary: Colors.black,
+              surface: AppTheme.bgCard,
+              onSurface: AppTheme.textPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (newDate != null && mounted) {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (context) => const TimeLogDialog(title: 'Tarea Postergada'),
+      );
+
+      if (result != null) {
+        final minutes = result['minutes'] as int;
+        final note = result['note'] as String;
+        
+        final updated = widget.taskToEdit!.copyWith(
+          title: _titleController.text.trim(),
+          description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+          category: _selectedCategory,
+          date: newDate,
+          time: _selectedTime,
+          isRecurring: _isRecurring,
+          recurringDays: _isRecurring ? _recurringDays.toList() : [],
+          notificationMinutes: int.tryParse(_notifController.text.trim()),
+        );
+        
+        if (minutes > 0 || note.isNotEmpty) {
+          updated.history.add(TimeLog(date: DateTime.now(), minutes: minutes, note: note));
+        }
+        
+        widget.provider.updateTask(updated);
+        Navigator.pop(context);
+      }
+    }
   }
 }
