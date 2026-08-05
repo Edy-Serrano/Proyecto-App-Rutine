@@ -15,26 +15,90 @@ class StatsScreen extends StatefulWidget {
 class _StatsScreenState extends State<StatsScreen> {
   DateTime _selectedDate = DateTime.now();
 
+  late double _weeklyRate;
+  late double _monthlyRate;
+  late int _streak;
+  late int _bestStreak;
+  late List<DailyStats> _last7;
+  late Map<TaskCategory, int> _byCategoryDaily;
+  late Map<TaskCategory, int> _byCategoryMonthly;
+  late Map<TaskCategory, double> _weeklyByCategory;
+  late Map<TaskCategory, double> _monthlyByCategory;
+  late Map<String, int> _byTaskName;
+  late Map<String, int> _totalByTaskName;
+
+  // Cache dependiente de la fecha seleccionada
+  late Map<TaskCategory, int> _timeInvested;
+  late int _totalTime;
+  late Map<String, int> _foodData;
+
+  @override
+  void initState() {
+    super.initState();
+    _recalcAll();
+    widget.provider.addListener(_onProviderChange);
+  }
+
+  @override
+  void dispose() {
+    widget.provider.removeListener(_onProviderChange);
+    super.dispose();
+  }
+
+  void _onProviderChange() {
+    if (mounted) {
+      setState(() {
+        _recalcAll();
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(StatsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _recalcAll();
+  }
+
+  void _recalcAll() {
+    _weeklyRate = widget.provider.weeklyCompletionRate(_selectedDate);
+    _monthlyRate = widget.provider.monthlyCompletionRate(_selectedDate);
+    _weeklyByCategory = widget.provider.weeklyCompletionRateByCategory(_selectedDate);
+    _monthlyByCategory = widget.provider.monthlyCompletionRateByCategory(_selectedDate);
+    _streak = widget.provider.currentStreak;
+    _bestStreak = widget.provider.bestStreak;
+    _last7 = widget.provider.getLast7DaysStats(_selectedDate);
+    _byCategoryDaily = widget.provider.completedByCategoryDaily(_selectedDate);
+    _byCategoryMonthly = widget.provider.completedByCategoryMonthly(_selectedDate);
+    _byTaskName = widget.provider.completedByTaskName(_selectedDate);
+    _totalByTaskName = widget.provider.totalByTaskName(_selectedDate);
+    _timeInvested = widget.provider.timeInvestedByCategory(_selectedDate);
+    _totalTime = widget.provider.totalTimeInvested(_selectedDate);
+    _foodData = widget.provider.foodStats(_selectedDate);
+  }
+
+  void _changeDate(DateTime newDate) {
+    setState(() {
+      _selectedDate = newDate;
+      _recalcAll();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    final weeklyRate = widget.provider.weeklyCompletionRate();
-    final monthlyRate = widget.provider.monthlyCompletionRate();
-    final streak = widget.provider.currentStreak;
-    final bestStreak = widget.provider.bestStreak;
-    final last7 = widget.provider.getLast7DaysStats();
-    
-    // Tareas completadas (para el pie chart global si se desea, o lo cambiamos a tiempo)
-    final byCategory = widget.provider.completedByCategory();
-    
-    // TIEMPO INVERTIDO
-    final timeInvested = widget.provider.timeInvestedByCategory(_selectedDate);
-    final totalTime = widget.provider.totalTimeInvested(_selectedDate);
-    
-    // ESTADÍSTICAS FOOD
-    final foodData = widget.provider.foodStats(_selectedDate);
-    
-    final byTaskName = widget.provider.completedByTaskName();
-    final totalByTaskName = widget.provider.totalByTaskName();
+    final weeklyRate = _weeklyRate;
+    final monthlyRate = _monthlyRate;
+    final streak = _streak;
+    final bestStreak = _bestStreak;
+    final last7 = _last7;
+    final weeklyByCategory = _weeklyByCategory;
+    final monthlyByCategory = _monthlyByCategory;
+    final byCategoryDaily = _byCategoryDaily;
+    final byCategoryMonthly = _byCategoryMonthly;
+    final timeInvested = _timeInvested;
+    final totalTime = _totalTime;
+    final foodData = _foodData;
+    final byTaskName = _byTaskName;
+    final totalByTaskName = _totalByTaskName;
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -44,7 +108,7 @@ class _StatsScreenState extends State<StatsScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.today_rounded, color: AppTheme.neonCyan),
-            onPressed: () => setState(() => _selectedDate = DateTime.now()),
+            onPressed: () => _changeDate(DateTime.now()),
           ),
         ],
       ),
@@ -149,6 +213,19 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
             const SizedBox(height: 28),
 
+            // === DESGLOSE POR CATEGORÍA ===
+            if (weeklyByCategory.isNotEmpty || monthlyByCategory.isNotEmpty) ...[
+              _buildSectionTitle(context, '📊 Progreso por Categoría'),
+              const SizedBox(height: 12),
+              ...TaskCategory.values.map((cat) {
+                final weekly = weeklyByCategory[cat];
+                final monthly = monthlyByCategory[cat];
+                if (weekly == null && monthly == null) return const SizedBox.shrink();
+                return _buildCategoryProgressRow(context, cat, weekly ?? 0.0, monthly ?? 0.0);
+              }),
+              const SizedBox(height: 28),
+            ],
+
             // === PROGRESO POR TAREA ESPECÍFICA ===
             _buildSectionTitle(context, '🎯 Por tarea específica'),
             const SizedBox(height: 12),
@@ -162,12 +239,20 @@ class _StatsScreenState extends State<StatsScreen> {
                 return _buildTaskNameRow(context, taskName, completed, total);
               }),
 
-            // === PIE CHART ===
-            if (byCategory.isNotEmpty) ...[
+            // === PIE CHART DIARIO ===
+            if (byCategoryDaily.isNotEmpty) ...[
               const SizedBox(height: 28),
-              _buildSectionTitle(context, '🥧 Distribución de tareas'),
+              _buildSectionTitle(context, '🥧 Distribución del día'),
               const SizedBox(height: 16),
-              _buildPieChart(context, byCategory),
+              _buildPieChart(context, byCategoryDaily),
+            ],
+
+            // === PIE CHART MENSUAL ===
+            if (byCategoryMonthly.isNotEmpty) ...[
+              const SizedBox(height: 28),
+              _buildSectionTitle(context, '🥧 Distribución del mes'),
+              const SizedBox(height: 16),
+              _buildPieChart(context, byCategoryMonthly),
             ],
 
             const SizedBox(height: 80),
@@ -183,7 +268,7 @@ class _StatsScreenState extends State<StatsScreen> {
       children: [
         IconButton(
           icon: Icon(Icons.chevron_left_rounded, color: AppTheme.textSecondary),
-          onPressed: () => setState(() => _selectedDate = _selectedDate.subtract(const Duration(days: 1))),
+          onPressed: () => _changeDate(_selectedDate.subtract(const Duration(days: 1))),
         ),
         Text(
           _formattedDate(_selectedDate),
@@ -191,7 +276,7 @@ class _StatsScreenState extends State<StatsScreen> {
         ),
         IconButton(
           icon: Icon(Icons.chevron_right_rounded, color: AppTheme.textSecondary),
-          onPressed: () => setState(() => _selectedDate = _selectedDate.add(const Duration(days: 1))),
+          onPressed: () => _changeDate(_selectedDate.add(const Duration(days: 1))),
         ),
       ],
     );
@@ -332,6 +417,86 @@ class _StatsScreenState extends State<StatsScreen> {
                 .textTheme
                 .bodyMedium
                 ?.copyWith(color: AppTheme.textSecondary, fontSize: 12),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCategoryProgressRow(BuildContext context, TaskCategory category, double weeklyRate, double monthlyRate) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.bgCard,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: category.color.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(category.icon, color: category.color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                category.label,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppTheme.textPrimary,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Semana', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        Text('${(weeklyRate * 100).toInt()}%', style: TextStyle(color: category.color, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: weeklyRate,
+                      backgroundColor: AppTheme.bgSurface,
+                      color: category.color,
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Mes', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                        Text('${(monthlyRate * 100).toInt()}%', style: TextStyle(color: category.color, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    LinearProgressIndicator(
+                      value: monthlyRate,
+                      backgroundColor: AppTheme.bgSurface,
+                      color: category.color.withOpacity(0.6),
+                      minHeight: 6,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ],
       ),

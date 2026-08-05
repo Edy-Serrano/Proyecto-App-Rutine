@@ -29,10 +29,11 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
      - Gráficas y tarjetas dinámicas que te muestran tu progreso.
    - Contadores numéricos que premian los días perfectos consecutivos (Mejor Racha y Racha Actual).
 
-4. **Registro de Tiempo y Postergación (Time Tracking):**
+4. **Registro de Tiempo y Postergación Inteligente (Time Tracking):**
    - Al marcar una tarea como completada, se te preguntará el tiempo que le has dedicado y si tienes una nota.
-   - Posibilidad de **Posponer** tareas a otro día desde el menú de edición, registrando el tiempo que le invertiste hoy sin perder el historial.
-   - Al tocar cualquier tarea, se despliega una ventana con todo su **Historial de Tiempos**.
+   - Posibilidad de **Posponer** tareas a otro día desde el menú de edición, registrando el avance de hoy sin perder el historial.
+   - **Sistema de Cadenas Dinámicas:** Al posponer múltiples veces, la aplicación crea una cadena inteligente. Las horas se calculan dinámicamente; si eliminas una tarea intermedia, la cadena se reconecta de forma automática (restando el tiempo de esa tarea eliminada pero conservando intacto todo el resto del historial), garantizando métricas globales perfectas sin conteo doble.
+   - Al tocar cualquier tarea, se despliega una ventana con todo su **Historial de Tiempos** consolidado.
 
 5. **Registro Nutricional Integrado:**
    - Creación de tareas con la categoría **Comida** despliega un panel especial.
@@ -62,12 +63,14 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 - Toca el ícono de calendario en la barra inferior.
 - En la parte superior verás un carrusel de fechas. Selecciónalo para ir al día que desees organizar o revisar (ideal para prepararte para el día de mañana).
 
-### Panel de Estadísticas (Stats)
+### Panel de Estadísticas Dinámico (Stats)
 - Toca el ícono de gráfica en la barra inferior.
-- Selecciona el **Día** que quieres evaluar usando las flechas superiores.
+- Selecciona la **Fecha** que quieres evaluar usando las flechas superiores. Toda la pantalla reacciona como una máquina del tiempo: si viajas a un mes pasado, todos tus promedios, listas y gráficos se ajustarán para mostrarte el desempeño de esa época.
+- **Resumen Semanal y Mensual:** Visualiza tus rachas, porcentaje de éxito general y el porcentaje de éxito desglosado **por cada categoría**.
+- **Por Tarea Específica:** Identifica hábitos individuales. Analiza cuántas veces programaste vs cuántas veces completaste una tarea exacta *durante el mes que tienes seleccionado*.
+- **Gráficos de Distribución:** Explora dos gráficos de pastel interactivos. Uno para ver en qué categorías se fue tu día, y otro para ver el panorama general de tu mes.
 - Visualiza el tiempo exacto (en horas y minutos) que invertiste en cada categoría.
 - Si registraste tareas de la categoría **Comida**, verás aquí mismo una tarjeta con la recopilación de tu consumo de macros (Agua, Proteínas y Carbohidratos).
-- Compite contigo mismo para lograr la "Mejor Racha Histórica".
 
 ### Perfil y Configuración
 - Personaliza tu experiencia. Toca el botón de cambiar Foto de Perfil o modifica tu nombre de usuario.

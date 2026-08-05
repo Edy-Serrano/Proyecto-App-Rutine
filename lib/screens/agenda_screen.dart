@@ -20,6 +20,22 @@ class _AgendaScreenState extends State<AgendaScreen> {
   DateTime _selectedDay = DateTime.now();
 
   @override
+  void initState() {
+    super.initState();
+    widget.provider.addListener(_onProviderChange);
+  }
+
+  @override
+  void dispose() {
+    widget.provider.removeListener(_onProviderChange);
+    super.dispose();
+  }
+
+  void _onProviderChange() {
+    if (mounted) setState(() {});
+  }
+
+  @override
   Widget build(BuildContext context) {
     final tasksForDay = widget.provider.tasksForDate(_selectedDay);
     final rate = widget.provider.completionRateForDate(_selectedDay);
@@ -295,22 +311,18 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 if (result != null) {
                   final minutes = result['minutes'] as int;
                   final note = result['note'] as String;
-                  if (minutes > 0 || note.isNotEmpty) {
-                    await widget.provider.addTimeLog(
-                      task.id,
-                      TimeLog(date: DateTime.now(), minutes: minutes, note: note),
-                    );
-                  }
+                  await widget.provider.completeTask(task.id, minutes: minutes, note: note);
+                  if (mounted) setState(() {});
                 }
-                
-                await widget.provider.toggleTaskCompletion(task.id);
+              } else {
+                await widget.provider.toggleTask(task.id);
                 if (mounted) setState(() {});
               }
             },
             onLongPress: () async {
               if (task.isCompleted) {
                 HapticFeedback.heavyImpact();
-                await widget.provider.toggleTaskCompletion(task.id);
+                await widget.provider.toggleTask(task.id);
                 if (mounted) setState(() {});
               }
             },
@@ -350,12 +362,29 @@ class _AgendaScreenState extends State<AgendaScreen> {
                     fontSize: 14,
                   ),
                 ),
-                if (task.time != null)
-                  Text(
-                    '${task.time!.hour.toString().padLeft(2, '0')}:${task.time!.minute.toString().padLeft(2, '0')}',
-                    style: TextStyle(
-                        color: task.category.color,
-                        fontSize: 11),
+                if (task.time != null || task.isPostponed)
+                  Row(
+                    children: [
+                      if (task.time != null) ...[
+                        Text(
+                          '${task.time!.hour.toString().padLeft(2, '0')}:${task.time!.minute.toString().padLeft(2, '0')}',
+                          style: TextStyle(
+                              color: task.category.color,
+                              fontSize: 11),
+                        ),
+                        if (task.isPostponed) const SizedBox(width: 6),
+                      ],
+                      if (task.isPostponed)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                          ),
+                          child: const Text('Continúa →', style: TextStyle(color: Colors.orange, fontSize: 9, fontWeight: FontWeight.bold)),
+                        ),
+                    ],
                   ),
               ],
             ),
@@ -408,8 +437,9 @@ class _AgendaScreenState extends State<AgendaScreen> {
     );
   }
   void _showTaskDetails(BuildContext context, Task task) {
+    final fullHistory = widget.provider.getFullHistory(task);
     int totalMinutes = 0;
-    for (var log in task.history) {
+    for (var log in fullHistory) {
       totalMinutes += log.minutes;
     }
     
@@ -434,13 +464,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
                 style: TextStyle(color: AppTheme.textSecondary),
               ),
-              if (task.history.isNotEmpty) ...[
+              if (fullHistory.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Divider(color: AppTheme.bgSurface),
                 const SizedBox(height: 8),
                 const Text('Historial de Tiempo:', style: TextStyle(color: AppTheme.neonCyan, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                ...task.history.map((log) {
+                ...fullHistory.map((log) {
                   const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
                   final dayStr = days[log.date.weekday - 1];
                   final timeStr = log.minutes >= 60 
@@ -464,6 +494,16 @@ class _AgendaScreenState extends State<AgendaScreen> {
           ),
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_outline, color: AppTheme.neonPink),
+            onPressed: () async {
+              final deleted = await _confirmDelete(context, task, widget.provider);
+              if (deleted) {
+                if (mounted) Navigator.pop(context);
+                setState(() {});
+              }
+            },
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
@@ -471,6 +511,43 @@ class _AgendaScreenState extends State<AgendaScreen> {
         ],
       ),
     );
+  }
+
+  Future<bool> _confirmDelete(BuildContext context, Task task, TaskProvider provider) async {
+    if (task.recurringGroupId != null) {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.bgCard,
+          title: Text('Eliminar tarea', style: TextStyle(color: AppTheme.textPrimary)),
+          content: Text('¿Deseas eliminar solo esta tarea o también todas las futuras repeticiones de esta rutina?', style: TextStyle(color: AppTheme.textSecondary)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'cancel'),
+              child: Text('Cancelar', style: TextStyle(color: AppTheme.textMuted)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'only_this'),
+              child: const Text('Solo esta', style: TextStyle(color: AppTheme.neonCyan)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'future'),
+              child: const Text('Esta y futuras', style: TextStyle(color: AppTheme.neonPink)),
+            ),
+          ],
+        ),
+      );
+      if (result == 'cancel' || result == null) return false;
+      if (result == 'future') {
+        await provider.deleteRecurringFutureTasks(task);
+      } else {
+        await provider.deleteTask(task.id);
+      }
+      return true;
+    } else {
+      await provider.deleteTask(task.id);
+      return true;
+    }
   }
 
   void _openAddTask() {

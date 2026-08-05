@@ -13,11 +13,36 @@ class TaskProvider extends ChangeNotifier {
     _loadTasks();
   }
 
-  void _loadTasks() {
-    _tasks = HiveService.getTasks();
+  Future<void> _loadTasks() async {
+    _tasks = await HiveService.getTasks();
+    
+    // Limpieza: Eliminar TimeLogs en tareas no completadas con recurringGroupId
+    // para prevenir datos fantasma (se ejecuta solo en background)
+    _cleanupGhostLogs();
+
     _userName = HiveService.getUserName();
     _userImagePath = HiveService.getUserImagePath();
     notifyListeners();
+  }
+
+  /// Limpia logs huerófanos en background sin bloquear la UI
+  Future<void> _cleanupGhostLogs() async {
+    bool changed = false;
+    for (var task in _tasks) {
+      // Limpiar logs de tareas recurrentes que no correspondan a su fecha
+      if (task.recurringGroupId != null && task.history.isNotEmpty) {
+        final before = task.history.length;
+        task.history.retainWhere((log) =>
+            log.date.year == task.date.year &&
+            log.date.month == task.date.month &&
+            log.date.day == task.date.day);
+        if (task.history.length != before) {
+          await HiveService.updateTask(task);
+          changed = true;
+        }
+      }
+    }
+    if (changed) notifyListeners();
   }
 
   List<Task> get tasks => List.unmodifiable(_tasks);
@@ -30,9 +55,9 @@ class TaskProvider extends ChangeNotifier {
   List<Task> tasksForDate(DateTime date) {
     return _tasks.where((t) {
       final sameDay = _isSameDay(t.date, date);
-      final isRecurringToday =
-          t.isRecurring && t.recurringDays.contains(date.weekday);
-      return sameDay || isRecurringToday;
+      final isLegacyRecurringToday =
+          t.isRecurring && t.recurringGroupId == null && t.recurringDays.contains(date.weekday);
+      return sameDay || isLegacyRecurringToday;
     }).toList()
       ..sort((a, b) {
         if (a.time == null && b.time == null) return 0;
@@ -51,9 +76,8 @@ class TaskProvider extends ChangeNotifier {
   }
 
   /// % de completitud de la semana actual (promedio de días con tareas)
-  double weeklyCompletionRate() {
-    final now = DateTime.now();
-    final monday = now.subtract(Duration(days: now.weekday - 1));
+  double weeklyCompletionRate(DateTime date) {
+    final monday = date.subtract(Duration(days: date.weekday - 1));
     double total = 0;
     int days = 0;
     for (int i = 0; i < 7; i++) {
@@ -66,21 +90,80 @@ class TaskProvider extends ChangeNotifier {
     return days == 0 ? 0.0 : total / days;
   }
 
-  /// % de completitud del mes actual
-  double monthlyCompletionRate() {
+  /// % de completitud del mes (según la fecha seleccionada)
+  double monthlyCompletionRate(DateTime date) {
     final now = DateTime.now();
-    final daysInMonth = DateTime(now.year, now.month + 1, 0).day;
+    final daysInMonth = DateTime(date.year, date.month + 1, 0).day;
     double total = 0;
     int days = 0;
     for (int i = 1; i <= daysInMonth; i++) {
-      final day = DateTime(now.year, now.month, i);
-      if (day.isAfter(now)) break;
+      final day = DateTime(date.year, date.month, i);
+      // Si el mes es el actual, no calculamos días futuros. Si es un mes pasado, calculamos todo el mes.
+      if (day.year == now.year && day.month == now.month && day.isAfter(now)) break;
       if (tasksForDate(day).isNotEmpty) {
         total += completionRateForDate(day);
         days++;
       }
     }
     return days == 0 ? 0.0 : total / days;
+  }
+
+  /// % de completitud semanal por categoría
+  Map<TaskCategory, double> weeklyCompletionRateByCategory(DateTime date) {
+    final monday = date.subtract(Duration(days: date.weekday - 1));
+    final Map<TaskCategory, double> totals = {};
+    final Map<TaskCategory, int> daysCount = {};
+
+    for (int i = 0; i < 7; i++) {
+      final day = monday.add(Duration(days: i));
+      final allTasks = tasksForDate(day);
+      
+      for (var cat in TaskCategory.values) {
+        final catTasks = allTasks.where((t) => t.category == cat).toList();
+        if (catTasks.isNotEmpty) {
+          final completed = catTasks.where((t) => t.isCompleted).length;
+          final rate = completed / catTasks.length;
+          totals[cat] = (totals[cat] ?? 0.0) + rate;
+          daysCount[cat] = (daysCount[cat] ?? 0) + 1;
+        }
+      }
+    }
+
+    final result = <TaskCategory, double>{};
+    for (var cat in totals.keys) {
+      result[cat] = totals[cat]! / daysCount[cat]!;
+    }
+    return result;
+  }
+
+  /// % de completitud mensual por categoría
+  Map<TaskCategory, double> monthlyCompletionRateByCategory(DateTime date) {
+    final now = DateTime.now();
+    final daysInMonth = DateTime(date.year, date.month + 1, 0).day;
+    final Map<TaskCategory, double> totals = {};
+    final Map<TaskCategory, int> daysCount = {};
+
+    for (int i = 1; i <= daysInMonth; i++) {
+      final day = DateTime(date.year, date.month, i);
+      if (day.year == now.year && day.month == now.month && day.isAfter(now)) break;
+      
+      final allTasks = tasksForDate(day);
+      for (var cat in TaskCategory.values) {
+        final catTasks = allTasks.where((t) => t.category == cat).toList();
+        if (catTasks.isNotEmpty) {
+          final completed = catTasks.where((t) => t.isCompleted).length;
+          final rate = completed / catTasks.length;
+          totals[cat] = (totals[cat] ?? 0.0) + rate;
+          daysCount[cat] = (daysCount[cat] ?? 0) + 1;
+        }
+      }
+    }
+
+    final result = <TaskCategory, double>{};
+    for (var cat in totals.keys) {
+      result[cat] = totals[cat]! / daysCount[cat]!;
+    }
+    return result;
   }
 
   /// Racha actual de días consecutivos con 100% de completitud
@@ -174,16 +257,25 @@ class TaskProvider extends ChangeNotifier {
     return {'water': water, 'protein': protein, 'carbs': carbs};
   }
 
-  /// Completadas por categoría (para el pie chart)
-  Map<TaskCategory, int> completedByCategory() {
+  /// Completadas por categoría del día (para el pie chart diario)
+  Map<TaskCategory, int> completedByCategoryDaily(DateTime date) {
     final map = <TaskCategory, int>{};
-    for (final task in _tasks.where((t) => t.isCompleted)) {
+    for (final task in tasksForDate(date).where((t) => t.isCompleted)) {
       map[task.category] = (map[task.category] ?? 0) + 1;
     }
     return map;
   }
 
-  /// Total de tareas por categoría (para la barra de progreso por categoría)
+  /// Completadas por categoría del mes (para el pie chart mensual)
+  Map<TaskCategory, int> completedByCategoryMonthly(DateTime date) {
+    final map = <TaskCategory, int>{};
+    for (final task in _tasks.where((t) => t.isCompleted && t.date.year == date.year && t.date.month == date.month)) {
+      map[task.category] = (map[task.category] ?? 0) + 1;
+    }
+    return map;
+  }
+
+  /// Total de tareas por categoría (histórico general, útil para otras métricas)
   Map<TaskCategory, int> totalByCategory() {
     final map = <TaskCategory, int>{};
     for (final task in _tasks) {
@@ -192,32 +284,31 @@ class TaskProvider extends ChangeNotifier {
     return map;
   }
 
-  /// Completadas por nombre de tarea
-  Map<String, int> completedByTaskName() {
+  /// Completadas por nombre de tarea (en el mes seleccionado)
+  Map<String, int> completedByTaskName(DateTime date) {
     final map = <String, int>{};
-    for (final task in _tasks.where((t) => t.isCompleted)) {
+    for (final task in _tasks.where((t) => t.isCompleted && t.date.year == date.year && t.date.month == date.month)) {
       final name = task.title.trim();
       map[name] = (map[name] ?? 0) + 1;
     }
     return map;
   }
 
-  /// Total de tareas por nombre de tarea
-  Map<String, int> totalByTaskName() {
+  /// Total de tareas por nombre de tarea (en el mes seleccionado)
+  Map<String, int> totalByTaskName(DateTime date) {
     final map = <String, int>{};
-    for (final task in _tasks) {
+    for (final task in _tasks.where((t) => t.date.year == date.year && t.date.month == date.month)) {
       final name = task.title.trim();
       map[name] = (map[name] ?? 0) + 1;
     }
     return map;
   }
 
-  /// Datos de completitud por día para los últimos 7 días (para el bar chart)
-  List<DailyStats> getLast7DaysStats() {
+  /// Datos de completitud por día para los últimos 7 días terminando en la fecha seleccionada
+  List<DailyStats> getLast7DaysStats(DateTime date) {
     final result = <DailyStats>[];
-    final now = DateTime.now();
     for (int i = 6; i >= 0; i--) {
-      final day = now.subtract(Duration(days: i));
+      final day = date.subtract(Duration(days: i));
       result.add(DailyStats(
         date: day,
         completionRate: completionRateForDate(day),
@@ -231,9 +322,29 @@ class TaskProvider extends ChangeNotifier {
   // ─── MUTACIONES ─────────────────────────────────────────────────────────────
 
   Future<void> addTask(Task task) async {
-    _tasks.add(task);
-    await HiveService.addTask(task);
-    _scheduleNotificationIfNeeded(task);
+    if (task.isRecurring && task.recurringEndDate != null) {
+      final groupId = task.recurringGroupId ?? 'grp_${DateTime.now().millisecondsSinceEpoch}';
+      
+      DateTime current = task.date;
+      while (!current.isAfter(task.recurringEndDate!)) {
+        if (task.recurringDays.contains(current.weekday)) {
+          final newTask = task.copyWith(
+            id: 'task_${DateTime.now().microsecondsSinceEpoch}_${current.millisecondsSinceEpoch}',
+            date: current,
+            recurringGroupId: groupId,
+            history: [],
+          );
+          _tasks.add(newTask);
+          await HiveService.addTask(newTask);
+          _scheduleNotificationIfNeeded(newTask);
+        }
+        current = current.add(const Duration(days: 1));
+      }
+    } else {
+      _tasks.add(task);
+      await HiveService.addTask(task);
+      _scheduleNotificationIfNeeded(task);
+    }
     notifyListeners();
   }
 
@@ -241,33 +352,157 @@ class TaskProvider extends ChangeNotifier {
     final index = _tasks.indexWhere((t) => t.id == id);
     if (index != -1) {
       _tasks[index].history.add(log);
-      await HiveService.saveTasks(_tasks);
+      await HiveService.updateTask(_tasks[index]);
       notifyListeners();
     }
   }
 
-  Future<void> toggleTaskCompletion(String taskId) async {
-    final index = _tasks.indexWhere((t) => t.id == taskId);
+  /// Completa una tarea: guarda el TimeLog y la marca en UNA sola escritura a Hive
+  Future<void> completeTask(String id, {int minutes = 0, String note = ''}) async {
+    final index = _tasks.indexWhere((t) => t.id == id);
     if (index != -1) {
-      _tasks[index] = _tasks[index].copyWith(
-        isCompleted: !_tasks[index].isCompleted,
-      );
-      await HiveService.updateTask(_tasks[index]);
+      final task = _tasks[index];
+      if (minutes > 0 || note.isNotEmpty) {
+        task.history.add(TimeLog(date: DateTime.now(), minutes: minutes, note: note));
+      }
+      task.isCompleted = true;
+      await HiveService.updateTask(task);
+      await NotificationService.cancelNotification(task.id.hashCode);
+      notifyListeners();
+    }
+  }
+
+  /// Posterga una tarea:
+  /// 1. Marca la original como completada + postergada (queda en su día con "Continúa →")
+  /// 2. Crea una nueva tarea en la fecha futura heredando el historial acumulado
+  Future<void> postponeTask(Task original, DateTime newDate, {int minutes = 0, String note = ''}) async {
+    // ── Paso 1: Actualizar la tarea original ──────────────────────────────────
+    final origIndex = _tasks.indexWhere((t) => t.id == original.id);
+    if (origIndex == -1) return;
+
+    final origTask = _tasks[origIndex];
+
+    // Registrar el tiempo de hoy en la tarea original
+    if (minutes > 0 || note.isNotEmpty) {
+      origTask.history.add(TimeLog(date: DateTime.now(), minutes: minutes, note: note));
+    }
+    origTask.isCompleted = true;
+    origTask.isPostponed = true;
+    await HiveService.updateTask(origTask);
+    await NotificationService.cancelNotification(origTask.id.hashCode);
+
+    // ── Paso 2: Crear la tarea continuación en la nueva fecha ─────────────────
+    // NO copiar el historial para evitar doble conteo. Se calculará dinámicamente con getFullHistory.
+    final continuation = Task(
+      id: 'task_${DateTime.now().microsecondsSinceEpoch}',
+      title: original.title,
+      description: original.description,
+      category: original.category,
+      date: DateTime(newDate.year, newDate.month, newDate.day),
+      time: original.time,
+      isCompleted: false,
+      isPostponed: false,
+      postponedFromId: original.id,  // enlace a la predecesora
+      isRecurring: false,            // la continuación no hereda recurrencia
+      recurringDays: [],
+      notificationMinutes: original.notificationMinutes,
+      history: [],
+      foodMetadata: original.foodMetadata != null
+          ? Map<String, dynamic>.from(original.foodMetadata!)
+          : null,
+    );
+
+    _tasks.add(continuation);
+    await HiveService.addTask(continuation);
+    _scheduleNotificationIfNeeded(continuation);
+
+    notifyListeners();
+  }
+
+  Future<void> toggleTask(String id) async {
+    int index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      final task = _tasks[index];
+      task.isCompleted = !task.isCompleted;
       
-      if (_tasks[index].isCompleted) {
-        await NotificationService.cancelNotification(_tasks[index].id.hashCode);
-      } else {
-        _scheduleNotificationIfNeeded(_tasks[index]);
+      // Si el usuario desmarca la tarea, limpiar el historial del día
+      if (!task.isCompleted) {
+        final now = DateTime.now();
+        task.history.removeWhere((log) =>
+          log.date.year == now.year && log.date.month == now.month && log.date.day == now.day);
       }
       
+      await HiveService.updateTask(task);
+      if (task.isCompleted) {
+        await NotificationService.cancelNotification(task.id.hashCode);
+      } else {
+        _scheduleNotificationIfNeeded(task);
+      }
       notifyListeners();
     }
   }
 
   Future<void> deleteTask(String taskId) async {
+    final taskToDeleteIndex = _tasks.indexWhere((t) => t.id == taskId);
+    
+    // Si la tarea a eliminar tiene hijos que fueron postergados desde ella, 
+    // enlazarlos al padre de la tarea eliminada para no romper la cadena.
+    if (taskToDeleteIndex != -1) {
+      final taskToDelete = _tasks[taskToDeleteIndex];
+      for (var t in _tasks) {
+        if (t.postponedFromId == taskId) {
+          t.postponedFromId = taskToDelete.postponedFromId;
+          await HiveService.updateTask(t);
+        }
+      }
+    }
+
     _tasks.removeWhere((t) => t.id == taskId);
     await HiveService.deleteTask(taskId);
     await NotificationService.cancelNotification(taskId.hashCode);
+    notifyListeners();
+  }
+
+  /// Recupera el historial completo de la tarea recorriendo sus predecesoras hacia atrás
+  List<TimeLog> getFullHistory(Task task) {
+    List<TimeLog> fullHistory = [...task.history];
+    String? currentId = task.postponedFromId;
+    
+    // Evitar bucles infinitos por si acaso (máximo 365 días de postergación seguidos)
+    int safetyCounter = 0;
+    while (currentId != null && safetyCounter < 365) {
+      final predecessor = _tasks.firstWhere(
+        (t) => t.id == currentId, 
+        orElse: () => Task(id: '', title: '', category: TaskCategory.custom, date: DateTime.now()) // Dummy falso
+      );
+      
+      if (predecessor.id.isNotEmpty) {
+        fullHistory.insertAll(0, predecessor.history);
+        currentId = predecessor.postponedFromId;
+      } else {
+        break; // predecesora ya no existe
+      }
+      safetyCounter++;
+    }
+    
+    return fullHistory;
+  }
+
+  Future<void> deleteRecurringFutureTasks(Task template) async {
+    final groupId = template.recurringGroupId;
+    if (groupId == null) return;
+    
+    // Eliminar esta tarea y todas las futuras que pertenezcan al mismo grupo
+    final futureTasks = _tasks.where((t) => 
+      t.recurringGroupId == groupId && 
+      !t.date.isBefore(template.date)
+    ).toList();
+
+    for (var t in futureTasks) {
+      _tasks.removeWhere((task) => task.id == t.id);
+      await HiveService.deleteTask(t.id);
+      await NotificationService.cancelNotification(t.id.hashCode);
+    }
     notifyListeners();
   }
 
@@ -282,6 +517,44 @@ class TaskProvider extends ChangeNotifier {
       }
       notifyListeners();
     }
+  }
+
+  Future<void> updateRecurringFutureTasks(Task updatedTemplate) async {
+    final groupId = updatedTemplate.recurringGroupId;
+    if (groupId == null) return;
+    
+    // Solo actualizar tareas a partir de la fecha de la tarea original que se editó
+    final fromDate = DateTime(updatedTemplate.date.year, updatedTemplate.date.month, updatedTemplate.date.day);
+    
+    bool changed = false;
+    for (int i = 0; i < _tasks.length; i++) {
+      final t = _tasks[i];
+      if (t.recurringGroupId == groupId) {
+        final tDate = DateTime(t.date.year, t.date.month, t.date.day);
+        if (tDate.isAfter(fromDate) || tDate.isAtSameMomentAs(fromDate)) {
+          // Copiar propiedades (pero mantener su propia fecha e historial de log, isCompleted, id)
+          final newTask = t.copyWith(
+            title: updatedTemplate.title,
+            description: updatedTemplate.description,
+            category: updatedTemplate.category,
+            time: updatedTemplate.time,
+            isRecurring: updatedTemplate.isRecurring,
+            recurringDays: updatedTemplate.recurringDays,
+            recurringEndDate: updatedTemplate.recurringEndDate,
+            notificationMinutes: updatedTemplate.notificationMinutes,
+            foodMetadata: updatedTemplate.foodMetadata,
+          );
+          _tasks[i] = newTask;
+          await HiveService.updateTask(newTask);
+          await NotificationService.cancelNotification(newTask.id.hashCode);
+          if (!newTask.isCompleted) {
+            _scheduleNotificationIfNeeded(newTask);
+          }
+          changed = true;
+        }
+      }
+    }
+    if (changed) notifyListeners();
   }
 
   Future<void> _scheduleNotificationIfNeeded(Task task) async {

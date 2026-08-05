@@ -45,6 +45,9 @@ class HiveService {
       await newBox.putAll(mapData);
     }
 
+    // MIGRACIÓN: Convertir tareas de índice numérico a clave por task.id
+    await _migrateToKeyedStorage();
+
     // MIGRATION: prefsBox
     try {
       await Hive.openBox(_prefsBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
@@ -63,43 +66,68 @@ class HiveService {
   static Box get _box => Hive.box(_tasksBoxName);
   static Box get _prefsBox => Hive.box(_prefsBoxName);
 
+  /// Migra las entradas con clave numérica al nuevo esquema con clave = task.id
+  static Future<void> _migrateToKeyedStorage() async {
+    final box = Hive.box(_tasksBoxName);
+    final numericKeys = box.keys.where((k) => k is int).toList();
+    if (numericKeys.isEmpty) return;
+
+    print('Migrating ${numericKeys.length} tasks to keyed storage...');
+    for (final key in numericKeys) {
+      final map = box.get(key) as Map<dynamic, dynamic>?;
+      if (map != null) {
+        try {
+          final task = Task.fromMap(map);
+          await box.put(task.id, task.toMap());
+          await box.delete(key);
+        } catch (e) {
+          print('Error migrating task at key $key: $e');
+        }
+      }
+    }
+    print('Migration complete.');
+  }
+
+  /// Carga todas las tareas del box. Usa las claves del box para eficiencia.
   static List<Task> getTasks() {
     final List<Task> tasks = [];
-    for (var i = 0; i < _box.length; i++) {
-      final map = _box.getAt(i) as Map<dynamic, dynamic>?;
+    for (final key in _box.keys) {
+      final map = _box.get(key) as Map<dynamic, dynamic>?;
       if (map != null) {
         try {
           tasks.add(Task.fromMap(map));
         } catch (e) {
-          print("Error parsing task: $e");
+          print("Error parsing task key=$key: $e");
         }
       }
     }
     return tasks;
   }
 
+  /// Guarda todas las tareas (limpia y re-inserta usando task.id como clave)
   static Future<void> saveTasks(List<Task> tasks) async {
     await _box.clear();
-    await _box.addAll(tasks.map((t) => t.toMap()).toList());
+    final Map<String, dynamic> entries = {
+      for (var t in tasks) t.id: t.toMap()
+    };
+    await _box.putAll(entries);
   }
 
+  /// Agrega una tarea nueva usando su id como clave (O(1))
   static Future<void> addTask(Task task) async {
-    await _box.add(task.toMap());
+    await _box.put(task.id, task.toMap());
   }
 
+  /// Actualiza una tarea existente por su id como clave (O(1))
   static Future<void> updateTask(Task task) async {
-    final index = getTasks().indexWhere((t) => t.id == task.id);
-    if (index != -1) {
-      await _box.putAt(index, task.toMap());
-    }
+    await _box.put(task.id, task.toMap());
   }
 
+  /// Elimina una tarea por su id como clave (O(1))
   static Future<void> deleteTask(String taskId) async {
-    final index = getTasks().indexWhere((t) => t.id == taskId);
-    if (index != -1) {
-      await _box.deleteAt(index);
-    }
+    await _box.delete(taskId);
   }
+
 
   // ─── PREFERENCIAS ─────────────────────────────────────────────────────────
 

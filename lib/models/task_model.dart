@@ -76,8 +76,12 @@ class Task {
   DateTime date;
   TimeOfDay? time;
   bool isCompleted;
+  bool isPostponed;        // true si fue postergada (queda en el día original con check)
+  String? postponedFromId; // id de la tarea predecesora si esta es una continuación
   bool isRecurring;
-  List<int> recurringDays; // 1=Lunes, 7=Domingo (basado en weekday de DateTime)
+  List<int> recurringDays;
+  DateTime? recurringEndDate;
+  String? recurringGroupId;
   int? notificationMinutes;
   List<TimeLog> history;
   Map<String, dynamic>? foodMetadata;
@@ -90,8 +94,12 @@ class Task {
     required this.date,
     this.time,
     this.isCompleted = false,
+    this.isPostponed = false,
+    this.postponedFromId,
     this.isRecurring = false,
     this.recurringDays = const [],
+    this.recurringEndDate,
+    this.recurringGroupId,
     this.notificationMinutes,
     List<TimeLog>? history,
     this.foodMetadata,
@@ -105,8 +113,12 @@ class Task {
     DateTime? date,
     TimeOfDay? time,
     bool? isCompleted,
+    bool? isPostponed,
+    String? postponedFromId,
     bool? isRecurring,
     List<int>? recurringDays,
+    DateTime? recurringEndDate,
+    String? recurringGroupId,
     int? notificationMinutes,
     List<TimeLog>? history,
     Map<String, dynamic>? foodMetadata,
@@ -119,11 +131,15 @@ class Task {
       date: date ?? this.date,
       time: time ?? this.time,
       isCompleted: isCompleted ?? this.isCompleted,
+      isPostponed: isPostponed ?? this.isPostponed,
+      postponedFromId: postponedFromId ?? this.postponedFromId,
       isRecurring: isRecurring ?? this.isRecurring,
       recurringDays: recurringDays ?? this.recurringDays,
+      recurringEndDate: recurringEndDate ?? this.recurringEndDate,
+      recurringGroupId: recurringGroupId ?? this.recurringGroupId,
       notificationMinutes: notificationMinutes ?? this.notificationMinutes,
-      history: history ?? this.history,
-      foodMetadata: foodMetadata ?? this.foodMetadata,
+      history: history ?? this.history.map((e) => TimeLog(date: e.date, minutes: e.minutes, note: e.note)).toList(),
+      foodMetadata: foodMetadata ?? (this.foodMetadata != null ? Map<String, dynamic>.from(this.foodMetadata!) : null),
     );
   }
 
@@ -137,8 +153,12 @@ class Task {
       'timeHour': time?.hour,
       'timeMinute': time?.minute,
       'isCompleted': isCompleted,
+      'isPostponed': isPostponed,
+      'postponedFromId': postponedFromId,
       'isRecurring': isRecurring,
       'recurringDays': recurringDays,
+      'recurringEndDate': recurringEndDate?.toIso8601String(),
+      'recurringGroupId': recurringGroupId,
       'notificationMinutes': notificationMinutes,
       'history': history.map((e) => e.toMap()).toList(),
       'foodMetadata': foodMetadata,
@@ -158,8 +178,12 @@ class Task {
       date: DateTime.parse(map['date'] as String),
       time: t,
       isCompleted: map['isCompleted'] as bool? ?? false,
+      isPostponed: map['isPostponed'] as bool? ?? false,
+      postponedFromId: map['postponedFromId'] as String?,
       isRecurring: map['isRecurring'] as bool? ?? false,
       recurringDays: (map['recurringDays'] as List<dynamic>?)?.map((e) => e as int).toList() ?? [],
+      recurringEndDate: map['recurringEndDate'] != null ? DateTime.parse(map['recurringEndDate'] as String) : null,
+      recurringGroupId: map['recurringGroupId'] as String?,
       notificationMinutes: map['notificationMinutes'] as int?,
       history: (map['history'] as List<dynamic>?)?.map((e) => TimeLog.fromMap(e as Map<dynamic, dynamic>)).toList() ?? [],
       foodMetadata: map['foodMetadata'] != null ? Map<String, dynamic>.from(map['foodMetadata'] as Map) : null,

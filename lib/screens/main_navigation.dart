@@ -22,23 +22,27 @@ class _MainNavigationState extends State<MainNavigation> {
   // Provider compartido entre todas las pantallas
   final TaskProvider _provider = TaskProvider();
 
-  List<Widget> get _screens => [
-    DashboardScreen(provider: _provider),
-    AgendaScreen(provider: _provider),
-    StatsScreen(provider: _provider),
-    ProfileScreen(provider: _provider, themeProvider: widget.themeProvider),
-  ];
+  // Pantallas persistentes: se crean una sola vez y se reusan
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      DashboardScreen(provider: _provider),
+      AgendaScreen(provider: _provider),
+      StatsScreen(provider: _provider),
+      ProfileScreen(provider: _provider, themeProvider: widget.themeProvider),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 250),
-        child: KeyedSubtree(
-          key: ValueKey(_currentIndex),
-          child: _screens[_currentIndex],
-        ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
       ),
       bottomNavigationBar: _buildBottomNav(),
       floatingActionButton: _buildFAB(),

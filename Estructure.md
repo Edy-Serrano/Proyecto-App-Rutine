@@ -16,14 +16,14 @@ El punto de entrada de la aplicación. Configura la inicialización de los servi
 ### 📁 `models/`
 Contiene las clases y estructuras de datos puras que representan la información de negocio de la aplicación.
 
-* **`task_model.dart`**: Define la clase `Task` (identificador, título, descripción, fecha, hora, estado de completado, días de recurrencia, minutos de recordatorio, historial de tiempos `history` con `TimeLog`, y metadatos nutricionales `foodMetadata`). También aloja el enum `TaskCategory` con sus respectivas extensiones para obtener iconos, nombres y colores (Higiene, Universidad, Trabajo, Compras, Paseo, Deporte, Comida, Otro).
+* **`task_model.dart`**: Define la clase `Task` (identificador, título, descripción, fecha, hora, estado de completado, estado de postergado `isPostponed` con enlace a su predecesora `postponedFromId`, días de recurrencia, minutos de recordatorio, historial de tiempos `history` con `TimeLog`, y metadatos nutricionales `foodMetadata`). También aloja el enum `TaskCategory` con sus respectivas extensiones para obtener iconos, nombres y colores (Higiene, Universidad, Trabajo, Compras, Paseo, Deporte, Comida, Otro).
 
 ---
 
 ### 📁 `providers/`
 Controla el estado global y la lógica de negocio activa, comunicando los servicios subyacentes con la interfaz gráfica (UI).
 
-* **`task_provider.dart`**: El núcleo lógico de la app. Gestiona la lista en memoria de las tareas. Provee métodos para agregar, editar, eliminar y marcar tareas como completadas. Se encarga de:
+* **`task_provider.dart`**: El núcleo lógico de la app. Gestiona la lista en memoria de las tareas. Provee métodos para agregar, editar, eliminar, marcar tareas como completadas y **posponer tareas**. Calcula los historiales de tareas postergadas de forma dinámica (`getFullHistory`) mediante enlazado en cascada, garantizando métricas sin duplicidad. Se encarga de:
   - Leer y escribir en `HiveService`.
   - Calcular estadísticas dinámicas (rachas actuales, mejores rachas, progreso de completado, tiempo invertido por categoría `timeInvestedByCategory` y estadísticas nutricionales `foodStats`).
   - Programar, cancelar y reprogramar las notificaciones llamando a `NotificationService`.
@@ -37,7 +37,7 @@ Contiene la Interfaz de Usuario (UI). Son los widgets (Stateful o Stateless) con
 * **`main_navigation.dart`**: Es el armazón base (Scaffold) que aloja la barra de navegación inferior (BottomNavigationBar) y controla qué pantalla se está mostrando actualmente.
 * **`dashboard_screen.dart`**: Pantalla de "Inicio". Muestra el saludo inicial (según la hora del día), la Frase del Día con gamificación para ganar rachas extra, el progreso circular del día actual y una lista de las tareas pendientes para hoy. Soporta interacciones táctiles completas (deslizar para completar/borrar, toque corto para detalles e historial de tiempo, toque largo para editar y posponer).
 * **`agenda_screen.dart`**: Vista de calendario. Usa un selector semanal deslizante. Permite ver las tareas asignadas a cualquier día en específico y también soporta acciones rápidas como marcar completado e interacciones para registro de tiempo.
-* **`stats_screen.dart`**: Panel de métricas. Utiliza un selector de fechas interactivo que muestra analíticas para la fecha elegida: "Tiempo invertido por categoría" con barras de progreso, y una subsección de "Nutrición de Hoy" (vasos de agua, proteínas, carbohidratos) para la categoría Comida, además de un resumen general de rachas.
+* **`stats_screen.dart`**: Panel de métricas dinámico. Toda la pantalla reacciona a la fecha seleccionada en el calendario, recalculando al instante: resúmenes semanales/mensuales generales y por categoría, progreso específico por tarea filtrado por mes, distribución de tiempo invertido, gráficos de pastel duales (diario y mensual), y una subsección de "Nutrición" para la categoría Comida.
 * **`profile_screen.dart`**: Pantalla de preferencias. Permite gestionar datos personales (nombre, foto de perfil), cambiar el modo visual (Claro/Oscuro), gestionar alertas locales y generar respaldos seguros de datos (cifrados con AES-256) exportables mediante share_plus.
 * **`add_task_sheet.dart`**: Es un `BottomSheet` dinámico y reutilizable que funge como formulario interactivo. Permite crear **nuevas tareas**, **editar tareas existentes**, o **posponer** tareas a nuevas fechas registrando el tiempo ya invertido. Cuenta con selectores estilizados para categoría, calendario de fechas, horas, y un panel nutricional especializado (si la categoría es `Food`).
 

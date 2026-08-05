@@ -22,6 +22,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime;
   bool _isRecurring = false;
+  DateTime? _recurringEndDate;
   final Set<int> _recurringDays = {}; // 1=Lun ... 7=Dom
   final _notifController = TextEditingController();
 
@@ -43,6 +44,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       _selectedDate = t.date;
       _selectedTime = t.time;
       _isRecurring = t.isRecurring;
+      _recurringEndDate = t.recurringEndDate;
       _recurringDays.addAll(t.recurringDays);
       if (t.notificationMinutes != null) {
         _notifController.text = t.notificationMinutes.toString();
@@ -77,6 +79,28 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       );
       return;
     }
+    if (_isRecurring && _recurringEndDate == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Debes seleccionar una fecha de "Repetir hasta"'),
+          backgroundColor: AppTheme.neonPink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
+    if (_isRecurring && _recurringDays.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Debes seleccionar al menos un día para repetir'),
+          backgroundColor: AppTheme.neonPink,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+      return;
+    }
     int? notifMins = int.tryParse(_notifController.text.trim());
 
     if (widget.taskToEdit != null) {
@@ -95,7 +119,37 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
           'carbs': _carbsGrams,
         } : null,
       );
-      widget.provider.updateTask(updated);
+      
+      if (updated.recurringGroupId != null) {
+        showDialog<String>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: AppTheme.bgCard,
+            title: const Text('Actualizar Tarea Recurrente', style: TextStyle(color: Colors.white)),
+            content: Text('¿Deseas actualizar solo esta tarea, o esta y todas las futuras de la misma rutina?', style: TextStyle(color: AppTheme.textSecondary)),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'single'),
+                child: Text('Solo esta', style: TextStyle(color: AppTheme.neonCyan)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, 'future'),
+                child: Text('Esta y futuras', style: TextStyle(color: AppTheme.neonPurple)),
+              ),
+            ],
+          ),
+        ).then((choice) {
+          if (choice == 'single') {
+            widget.provider.updateTask(updated);
+          } else if (choice == 'future') {
+            widget.provider.updateRecurringFutureTasks(updated);
+          }
+          Navigator.pop(context);
+        });
+        return; // wait for dialog
+      } else {
+        widget.provider.updateTask(updated);
+      }
     } else {
       final task = Task(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -106,6 +160,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         time: _selectedTime,
         isRecurring: _isRecurring,
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
+        recurringEndDate: _isRecurring ? _recurringEndDate : null,
         notificationMinutes: notifMins,
         foodMetadata: _selectedCategory == TaskCategory.food ? {
           'water': _waterGlasses,
@@ -137,6 +192,27 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       ),
     );
     if (picked != null) setState(() => _selectedDate = picked);
+  }
+
+  Future<void> _pickRecurringEndDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _recurringEndDate ?? _selectedDate.add(const Duration(days: 7)),
+      firstDate: _selectedDate,
+      lastDate: _selectedDate.add(const Duration(days: 365 * 5)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppTheme.neonPurple,
+            onPrimary: Colors.white,
+            surface: AppTheme.bgCard,
+            onSurface: AppTheme.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _recurringEndDate = picked);
   }
 
   Future<void> _pickTime() async {
@@ -522,7 +598,32 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                   ),
                 ),
               );
+
             }),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Text('Repetir hasta: ', style: TextStyle(color: AppTheme.textPrimary, fontSize: 14)),
+              const SizedBox(width: 8),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _pickRecurringEndDate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgSurface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _recurringEndDate == null ? AppTheme.neonPink.withOpacity(0.5) : AppTheme.neonPurple.withOpacity(0.5)),
+                    ),
+                    child: Text(
+                      _recurringEndDate == null ? 'Seleccionar fecha (Obligatorio)' : _formatDate(_recurringEndDate!),
+                      style: TextStyle(color: _recurringEndDate == null ? AppTheme.neonPink : AppTheme.neonCyan, fontSize: 13),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ],
@@ -613,23 +714,25 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         final minutes = result['minutes'] as int;
         final note = result['note'] as String;
         
-        final updated = widget.taskToEdit!.copyWith(
+        // Creamos una plantilla con los datos del formulario (por si el usuario cambió el título, etc.)
+        final updatedTemplate = widget.taskToEdit!.copyWith(
           title: _titleController.text.trim(),
           description: _descController.text.trim().isEmpty ? null : _descController.text.trim(),
           category: _selectedCategory,
-          date: newDate,
           time: _selectedTime,
-          isRecurring: _isRecurring,
-          recurringDays: _isRecurring ? _recurringDays.toList() : [],
           notificationMinutes: int.tryParse(_notifController.text.trim()),
         );
         
-        if (minutes > 0 || note.isNotEmpty) {
-          updated.history.add(TimeLog(date: DateTime.now(), minutes: minutes, note: note));
-        }
+        await widget.provider.postponeTask(
+          updatedTemplate, 
+          newDate, 
+          minutes: minutes, 
+          note: note,
+        );
         
-        widget.provider.updateTask(updated);
-        Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+        }
       }
     }
   }

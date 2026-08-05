@@ -20,6 +20,22 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   DateTime _selectedDate = DateTime.now();
 
+  @override
+  void initState() {
+    super.initState();
+    widget.provider.addListener(_onProviderChange);
+  }
+
+  @override
+  void dispose() {
+    widget.provider.removeListener(_onProviderChange);
+    super.dispose();
+  }
+
+  void _onProviderChange() {
+    if (mounted) setState(() {});
+  }
+
   String _greeting(String name) {
     final hour = DateTime.now().hour;
     if (hour < 12) return '¡Buenos días, $name! ☀️';
@@ -241,15 +257,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       key: Key(task.id),
       background: _swipeBackground(true),
       secondaryBackground: _swipeBackground(false),
-      onDismissed: (direction) {
+      confirmDismiss: (direction) async {
         if (direction == DismissDirection.startToEnd) {
-          provider.toggleTaskCompletion(task.id);
+          await provider.toggleTask(task.id);
+          return false;
         } else {
-          provider.deleteTask(task.id);
+          return await _confirmDelete(context, task, provider);
         }
       },
       child: GestureDetector(
-        onTap: () => _showTaskDetails(context, task),
+        onTap: () => _showTaskDetails(context, task, provider),
         onLongPress: () {
           HapticFeedback.mediumImpact();
           showModalBottomSheet(
@@ -309,14 +326,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               : AppTheme.textPrimary,
                         ),
                   ),
-                  if (task.time != null) ...[
+                  if (task.time != null || task.isPostponed) ...[
                     const SizedBox(height: 4),
-                    Text(
-                      '${task.time!.hour.toString().padLeft(2, '0')}:${task.time!.minute.toString().padLeft(2, '0')}',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: task.category.color,
-                            fontSize: 12,
+                    Row(
+                      children: [
+                        if (task.time != null) ...[
+                          Text(
+                            '${task.time!.hour.toString().padLeft(2, '0')}:${task.time!.minute.toString().padLeft(2, '0')}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: task.category.color,
+                                  fontSize: 12,
+                                ),
                           ),
+                          if (task.isPostponed) const SizedBox(width: 8),
+                        ],
+                        if (task.isPostponed)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.orange.withOpacity(0.4)),
+                            ),
+                            child: const Text('Continúa →', style: TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold)),
+                          ),
+                      ],
                     ),
                   ],
                 ],
@@ -334,22 +368,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   if (result != null) {
                     final minutes = result['minutes'] as int;
                     final note = result['note'] as String;
-                    if (minutes > 0 || note.isNotEmpty) {
-                      await provider.addTimeLog(
-                        task.id,
-                        TimeLog(date: DateTime.now(), minutes: minutes, note: note),
-                      );
-                    }
+                    await provider.completeTask(task.id, minutes: minutes, note: note);
                   }
-                  
-                  await provider.toggleTaskCompletion(task.id);
                   if (mounted) setState(() {});
                 }
               },
               onLongPress: () async {
                 if (task.isCompleted) {
                   HapticFeedback.heavyImpact();
-                  await provider.toggleTaskCompletion(task.id);
+                  await provider.toggleTask(task.id);
                   if (mounted) setState(() {});
                 }
               },
@@ -401,6 +428,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
+  Future<bool> _confirmDelete(BuildContext context, Task task, TaskProvider provider) async {
+    if (task.recurringGroupId != null) {
+      final result = await showDialog<String>(
+        context: context,
+        builder: (context) => AlertDialog(
+          backgroundColor: AppTheme.bgCard,
+          title: Text('Eliminar tarea', style: TextStyle(color: AppTheme.textPrimary)),
+          content: Text('¿Deseas eliminar solo esta tarea o también todas las futuras repeticiones de esta rutina?', style: TextStyle(color: AppTheme.textSecondary)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'cancel'),
+              child: Text('Cancelar', style: TextStyle(color: AppTheme.textMuted)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'only_this'),
+              child: const Text('Solo esta', style: TextStyle(color: AppTheme.neonCyan)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(context, 'future'),
+              child: const Text('Esta y futuras', style: TextStyle(color: AppTheme.neonPink)),
+            ),
+          ],
+        ),
+      );
+      if (result == 'cancel' || result == null) return false;
+      if (result == 'future') {
+        await provider.deleteRecurringFutureTasks(task);
+      } else {
+        await provider.deleteTask(task.id);
+      }
+      return true;
+    } else {
+      await provider.deleteTask(task.id);
+      return true;
+    }
+  }
+
   Widget _buildEmptyState(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 40),
@@ -429,9 +493,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
-  void _showTaskDetails(BuildContext context, Task task) {
+  void _showTaskDetails(BuildContext context, Task task, TaskProvider provider) {
+    final fullHistory = provider.getFullHistory(task);
     int totalMinutes = 0;
-    for (var log in task.history) {
+    for (var log in fullHistory) {
       totalMinutes += log.minutes;
     }
     
@@ -456,13 +521,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
                 style: TextStyle(color: AppTheme.textSecondary),
               ),
-              if (task.history.isNotEmpty) ...[
+              if (fullHistory.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Divider(color: AppTheme.bgSurface),
                 const SizedBox(height: 8),
                 const Text('Historial de Tiempo:', style: TextStyle(color: AppTheme.neonCyan, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                ...task.history.map((log) {
+                ...fullHistory.map((log) {
                   const days = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
                   final dayStr = days[log.date.weekday - 1];
                   final timeStr = log.minutes >= 60 
