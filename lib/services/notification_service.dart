@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -39,6 +40,12 @@ class NotificationService {
   }) async {
     if (scheduledDate.isBefore(DateTime.now())) return;
 
+    final Int64List vibrationPattern = Int64List(4);
+    vibrationPattern[0] = 0;
+    vibrationPattern[1] = 1000;
+    vibrationPattern[2] = 500;
+    vibrationPattern[3] = 2000;
+
     await _notificationsPlugin.zonedSchedule(
       id,
       title,
@@ -46,14 +53,18 @@ class NotificationService {
       tz.TZDateTime.from(scheduledDate, tz.local),
       NotificationDetails(
         android: AndroidNotificationDetails(
-          'rutine_tasks',
-          'Recordatorios de Tareas',
-          channelDescription: 'Canal para recordatorios de tareas de Rutine',
+          'rutine_tasks_custom_sound',
+          'Recordatorios con Sonido',
+          channelDescription: 'Canal principal para recordatorios con el sonido personalizado',
           importance: Importance.max,
           priority: Priority.high,
           icon: '@mipmap/launcher_icon',
           largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
           color: color,
+          enableVibration: true,
+          vibrationPattern: vibrationPattern,
+          playSound: true,
+          sound: const RawResourceAndroidNotificationSound('custom_sound'),
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
