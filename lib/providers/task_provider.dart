@@ -168,13 +168,21 @@ class TaskProvider extends ChangeNotifier {
 
   /// Racha actual de días consecutivos con 100% de completitud
   int get currentStreak {
+    if (_tasks.isEmpty) return 0;
+    
     int streak = 0;
     DateTime day = DateTime.now();
+    
     // Si hoy no está 100% completo, empieza desde ayer
     if (completionRateForDate(day) < 1.0 && tasksForDate(day).isNotEmpty) {
       day = day.subtract(const Duration(days: 1));
     }
-    while (true) {
+    
+    final dates = _tasks.map((t) => t.date).toList();
+    dates.sort();
+    final earliest = dates.first;
+
+    while (day.isAfter(earliest) || _isSameDay(day, earliest)) {
       final dayTasks = tasksForDate(day);
       if (dayTasks.isEmpty || completionRateForDate(day) < 1.0) break;
       streak++;
@@ -214,6 +222,22 @@ class TaskProvider extends ChangeNotifier {
     for (var task in _tasks) {
       for (var log in task.history) {
         if (log.date.year == date.year && log.date.month == date.month && log.date.day == date.day) {
+          result[task.category] = (result[task.category] ?? 0) + log.minutes;
+        }
+      }
+    }
+    result.removeWhere((key, value) => value == 0);
+    return result;
+  }
+
+  Map<TaskCategory, int> timeInvestedByCategoryMonthly(DateTime date) {
+    final Map<TaskCategory, int> result = {};
+    for (var cat in TaskCategory.values) {
+      result[cat] = 0;
+    }
+    for (var task in _tasks) {
+      for (var log in task.history) {
+        if (log.date.year == date.year && log.date.month == date.month) {
           result[task.category] = (result[task.category] ?? 0) + log.minutes;
         }
       }
@@ -574,13 +598,14 @@ class TaskProvider extends ChangeNotifier {
 
     if (scheduled.isAfter(DateTime.now())) {
       final title = task.notificationMinutes != null
-          ? 'En ${task.notificationMinutes} min: ¡Tu tarea!'
-          : '¡Hora de tu tarea!';
+          ? 'En ${task.notificationMinutes} min: ¡Tu actividad!'
+          : '¡Hora de tu actividad!';
       await NotificationService.scheduleTaskNotification(
         id: task.id.hashCode,
         title: title,
         body: task.title,
         scheduledDate: scheduled,
+        color: task.category.color,
       );
     }
   }

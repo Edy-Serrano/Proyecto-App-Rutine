@@ -17,12 +17,17 @@ class AppTheme {
 
   // Colores por Categoría
   static const Color catHygiene = Color(0xFF06B6D4);
-  static const Color catUniversity = Color(0xFF7C3AED);
+  static const Color catUniversity = Color(0xFFF43F5E); // Rojo-rosado
   static const Color catWork = Color(0xFFF59E0B);
   static const Color catShopping = Color(0xFF10B981);
-  static const Color catLeisure = Color(0xFFEC4899);
+  static const Color catLeisure = Color(0xFFEC4899); // Será usado para Paseo
   static const Color catSports = Color(0xFFEF4444);
-  static const Color catFood = Color(0xFFF97316); // Naranja vibrante
+  static const Color catFood = Color(0xFFF97316); 
+  static const Color catOcio = Color(0xFFD946EF); // Fuchsia para Ocio
+  static const Color catReading = Color(0xFF3B82F6); // Blue para Leer
+  static const Color catResearch = Color(0xFF6366F1); // Indigo para Investigar
+  static const Color catGaming = Color(0xFF8B5CF6); // Violeta para Gaming
+  static const Color catMeditation = Color(0xFF14B8A6); // Teal para Meditación
 
   // Textos
   static Color get textPrimary => isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);

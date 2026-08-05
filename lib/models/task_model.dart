@@ -1,19 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:rutine/theme/app_theme.dart';
 
-enum TaskCategory { hygiene, university, work, shopping, leisure, sports, food, custom }
+enum TaskCategory { hygiene, university, work, shopping, leisure, sports, food, custom, ocio, reading, research, gaming, meditation }
 
 extension TaskCategoryExtension on TaskCategory {
+  static List<TaskCategory> get uiOrder {
+    final list = TaskCategory.values.toList();
+    list.remove(TaskCategory.custom);
+    list.add(TaskCategory.custom);
+    return list;
+  }
+
   String get label {
     switch (this) {
       case TaskCategory.hygiene:     return 'Higiene';
       case TaskCategory.university:  return 'Universidad';
       case TaskCategory.work:        return 'Trabajo';
       case TaskCategory.shopping:    return 'Compras';
-      case TaskCategory.leisure:     return 'Paseo / Ocio';
+      case TaskCategory.leisure:     return 'Paseo';
       case TaskCategory.sports:      return 'Deporte';
       case TaskCategory.food:        return 'Comida';
       case TaskCategory.custom:      return 'Otro';
+      case TaskCategory.ocio:        return 'Ocio';
+      case TaskCategory.reading:     return 'Leer';
+      case TaskCategory.research:    return 'Investigar';
+      case TaskCategory.gaming:      return 'Gaming';
+      case TaskCategory.meditation:  return 'Meditación';
     }
   }
 
@@ -27,6 +39,11 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.sports:      return Icons.fitness_center_rounded;
       case TaskCategory.food:        return Icons.restaurant_rounded;
       case TaskCategory.custom:      return Icons.tag_rounded;
+      case TaskCategory.ocio:        return Icons.weekend_rounded;
+      case TaskCategory.reading:     return Icons.menu_book_rounded;
+      case TaskCategory.research:    return Icons.science_rounded;
+      case TaskCategory.gaming:      return Icons.videogame_asset_rounded;
+      case TaskCategory.meditation:  return Icons.self_improvement_rounded;
     }
   }
 
@@ -40,6 +57,11 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.sports:      return AppTheme.catSports;
       case TaskCategory.food:        return AppTheme.catFood;
       case TaskCategory.custom:      return AppTheme.neonCyan;
+      case TaskCategory.ocio:        return AppTheme.catOcio;
+      case TaskCategory.reading:     return AppTheme.catReading;
+      case TaskCategory.research:    return AppTheme.catResearch;
+      case TaskCategory.gaming:      return AppTheme.catGaming;
+      case TaskCategory.meditation:  return AppTheme.catMeditation;
     }
   }
 }

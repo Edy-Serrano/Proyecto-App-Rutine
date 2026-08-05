@@ -35,6 +35,7 @@ class NotificationService {
     required String title,
     required String body,
     required DateTime scheduledDate,
+    required Color color,
   }) async {
     if (scheduledDate.isBefore(DateTime.now())) return;
 
@@ -43,15 +44,16 @@ class NotificationService {
       title,
       body,
       tz.TZDateTime.from(scheduledDate, tz.local),
-      const NotificationDetails(
+      NotificationDetails(
         android: AndroidNotificationDetails(
           'rutine_tasks',
           'Recordatorios de Tareas',
           channelDescription: 'Canal para recordatorios de tareas de Rutine',
           importance: Importance.max,
           priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-          color: Color(0xFF6C63FF), // AppTheme.neonPurple
+          icon: '@mipmap/launcher_icon',
+          largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+          color: color,
         ),
       ),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,

@@ -414,7 +414,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       height: 80,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        children: TaskCategory.values.map((cat) {
+        children: TaskCategoryExtension.uiOrder.map((cat) {
           final isSelected = _selectedCategory == cat;
           return GestureDetector(
             onTap: () => setState(() => _selectedCategory = cat),

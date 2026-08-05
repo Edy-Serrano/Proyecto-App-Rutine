@@ -14,13 +14,13 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 ## Funcionalidades Principales (Features)
 
 1. **Gestión Integral de Tareas:**
-   - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, etc).
+   - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, Paseo, Ocio, Leer, Investigar, Gaming, Meditación, etc).
    - Asignación de iconos específicos y colores por cada categoría.
    - Posibilidad de establecer fechas y horas precisas.
 
 2. **Recordatorios Inteligentes (Notificaciones Locales):**
-   - Alarmas exactas integradas nativamente en Android.
-   - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu tarea (10, 15, 30 minutos, etc).
+   - Alarmas exactas integradas nativamente en Android con ícono y color representativo según la categoría.
+   - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu actividad (10, 15, 30 minutos, etc).
 
 3. **Gamificación y Estadísticas Interactivas:**
    - Panel de control principal con porcentaje de progreso en tiempo real y **Frase del Día** motivacional, con botones para ganar rachas extras.
@@ -68,8 +68,7 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 - Selecciona la **Fecha** que quieres evaluar usando las flechas superiores. Toda la pantalla reacciona como una máquina del tiempo: si viajas a un mes pasado, todos tus promedios, listas y gráficos se ajustarán para mostrarte el desempeño de esa época.
 - **Resumen Semanal y Mensual:** Visualiza tus rachas, porcentaje de éxito general y el porcentaje de éxito desglosado **por cada categoría**.
 - **Por Tarea Específica:** Identifica hábitos individuales. Analiza cuántas veces programaste vs cuántas veces completaste una tarea exacta *durante el mes que tienes seleccionado*.
-- **Gráficos de Distribución:** Explora dos gráficos de pastel interactivos. Uno para ver en qué categorías se fue tu día, y otro para ver el panorama general de tu mes.
-- Visualiza el tiempo exacto (en horas y minutos) que invertiste en cada categoría.
+- **Gráficos de Distribución:** Explora dos gráficos de pastel interactivos. Uno para ver en qué categorías se fue tu día, y otro para ver el panorama general de tu mes. Ambos gráficos están basados en el **tiempo exacto** (en horas y minutos) que invertiste en cada categoría.
 - Si registraste tareas de la categoría **Comida**, verás aquí mismo una tarjeta con la recopilación de tu consumo de macros (Agua, Proteínas y Carbohidratos).
 
 ### Perfil y Configuración

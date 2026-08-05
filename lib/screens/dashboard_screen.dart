@@ -55,7 +55,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         slivers: [
           // === APP BAR ===
           SliverAppBar(
-            expandedHeight: 155,
+            expandedHeight: 180,
             floating: false,
             pinned: true,
             backgroundColor: AppTheme.bgDark,
@@ -71,7 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     end: Alignment.bottomCenter,
                   ),
                 ),
-                padding: const EdgeInsets.fromLTRB(24, 85, 24, 16),
+                padding: const EdgeInsets.fromLTRB(24, 85, 24, 8),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [

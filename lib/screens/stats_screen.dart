@@ -29,6 +29,7 @@ class _StatsScreenState extends State<StatsScreen> {
 
   // Cache dependiente de la fecha seleccionada
   late Map<TaskCategory, int> _timeInvested;
+  late Map<TaskCategory, int> _timeInvestedMonthly;
   late int _totalTime;
   late Map<String, int> _foodData;
 
@@ -72,6 +73,7 @@ class _StatsScreenState extends State<StatsScreen> {
     _byTaskName = widget.provider.completedByTaskName(_selectedDate);
     _totalByTaskName = widget.provider.totalByTaskName(_selectedDate);
     _timeInvested = widget.provider.timeInvestedByCategory(_selectedDate);
+    _timeInvestedMonthly = widget.provider.timeInvestedByCategoryMonthly(_selectedDate);
     _totalTime = widget.provider.totalTimeInvested(_selectedDate);
     _foodData = widget.provider.foodStats(_selectedDate);
   }
@@ -95,6 +97,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final byCategoryDaily = _byCategoryDaily;
     final byCategoryMonthly = _byCategoryMonthly;
     final timeInvested = _timeInvested;
+    final timeInvestedMonthly = _timeInvestedMonthly;
     final totalTime = _totalTime;
     final foodData = _foodData;
     final byTaskName = _byTaskName;
@@ -217,7 +220,7 @@ class _StatsScreenState extends State<StatsScreen> {
             if (weeklyByCategory.isNotEmpty || monthlyByCategory.isNotEmpty) ...[
               _buildSectionTitle(context, '📊 Progreso por Categoría'),
               const SizedBox(height: 12),
-              ...TaskCategory.values.map((cat) {
+              ...TaskCategoryExtension.uiOrder.map((cat) {
                 final weekly = weeklyByCategory[cat];
                 final monthly = monthlyByCategory[cat];
                 if (weekly == null && monthly == null) return const SizedBox.shrink();
@@ -240,19 +243,19 @@ class _StatsScreenState extends State<StatsScreen> {
               }),
 
             // === PIE CHART DIARIO ===
-            if (byCategoryDaily.isNotEmpty) ...[
+            if (timeInvested.isNotEmpty) ...[
               const SizedBox(height: 28),
-              _buildSectionTitle(context, '🥧 Distribución del día'),
+              _buildSectionTitle(context, '🥧 Tiempo del día'),
               const SizedBox(height: 16),
-              _buildPieChart(context, byCategoryDaily),
+              _buildPieChart(context, timeInvested),
             ],
 
             // === PIE CHART MENSUAL ===
-            if (byCategoryMonthly.isNotEmpty) ...[
+            if (timeInvestedMonthly.isNotEmpty) ...[
               const SizedBox(height: 28),
-              _buildSectionTitle(context, '🥧 Distribución del mes'),
+              _buildSectionTitle(context, '🥧 Tiempo del mes'),
               const SizedBox(height: 16),
-              _buildPieChart(context, byCategoryMonthly),
+              _buildPieChart(context, timeInvestedMonthly),
             ],
 
             const SizedBox(height: 80),
@@ -503,6 +506,14 @@ class _StatsScreenState extends State<StatsScreen> {
     );
   }
 
+  String _formatMinutes(int minutes) {
+    if (minutes == 0) return '0m';
+    if (minutes < 60) return '${minutes}m';
+    final h = minutes ~/ 60;
+    final m = minutes % 60;
+    return m == 0 ? '${h}h' : '${h}h ${m}m';
+  }
+
   Widget _buildPieChart(
       BuildContext context, Map<TaskCategory, int> byCategory) {
     final entries = byCategory.entries.toList();
@@ -562,7 +573,7 @@ class _StatsScreenState extends State<StatsScreen> {
                       ),
                     ),
                     Text(
-                      '${e.value}',
+                      _formatMinutes(e.value),
                       style: TextStyle(
                           color: e.key.color,
                           fontWeight: FontWeight.bold,
