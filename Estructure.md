@@ -47,7 +47,7 @@ Contiene la Interfaz de Usuario (UI). Son los widgets (Stateful o Stateless) con
 Se encarga de la comunicación directa con APIs del sistema, bases de datos o servicios externos. Son clases estáticas o singletons que no manejan estado visual.
 
 * **`hive_service.dart`**: Inicializa la base de datos local utilizando cifrado nativo **AES-256** (cuya llave maestra se genera y guarda de forma segura con `flutter_secure_storage`). Provee la envoltura para leer/escribir las Tareas, preferencias de tema, notificaciones, persistencia del chequeo de la Frase del Día y funciones para exportar/importar la base de datos de manera segura (`exportSecureBackup` / `importSecureBackup`).
-* **`notification_service.dart`**: Puente con el sistema operativo Android usando `flutter_local_notifications`. Gestiona los permisos iniciales, la inicialización de zonas horarias locales (Timezones) y la programación exacta de alarmas en segundo plano, así como su cancelación.
+* **`notification_service.dart`**: Puente con el sistema operativo Android usando `flutter_local_notifications`. Gestiona los permisos iniciales, la inicialización de zonas horarias locales (Timezones) y la programación exacta de alarmas en segundo plano con configuraciones avanzadas de canales (incluyendo el sonido personalizado `custom_sound.mp3` y patrones de vibración), así como su cancelación.
 
 ---
 

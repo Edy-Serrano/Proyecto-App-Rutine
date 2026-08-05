@@ -20,6 +20,7 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 2. **Recordatorios Inteligentes (Notificaciones Locales):**
    - Alarmas exactas integradas nativamente en Android con ícono y color representativo según la categoría.
+   - Patrón de vibración personalizado y sonido específico (usando archivos `.mp3` propios) para garantizar que los recordatorios capten la atención.
    - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu actividad (10, 15, 30 minutos, etc).
 
 3. **Gamificación y Estadísticas Interactivas:**
