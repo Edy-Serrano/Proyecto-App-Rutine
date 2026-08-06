@@ -28,6 +28,7 @@ class AppTheme {
   static const Color catResearch = Color(0xFF6366F1); // Indigo para Investigar
   static const Color catGaming = Color(0xFF8B5CF6); // Violeta para Gaming
   static const Color catMeditation = Color(0xFF14B8A6); // Teal para Meditación
+  static const Color catCustom = Color(0xFF64748B); // Gris Pizarra para Otros
 
   // Textos
   static Color get textPrimary => isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);

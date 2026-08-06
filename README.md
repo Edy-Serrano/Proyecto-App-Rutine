@@ -14,7 +14,7 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 ## Funcionalidades Principales (Features)
 
 1. **Gestión Integral de Tareas:**
-   - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, Paseo, Ocio, Leer, Investigar, Gaming, Meditación, etc).
+   - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, Paseo, Entretenimiento, Leer, Investigar, Gaming, Meditación, etc).
    - Asignación de iconos específicos y colores por cada categoría.
    - Posibilidad de establecer fechas y horas precisas.
 

@@ -21,7 +21,7 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.sports:      return 'Deporte';
       case TaskCategory.food:        return 'Comida';
       case TaskCategory.custom:      return 'Otro';
-      case TaskCategory.ocio:        return 'Ocio';
+      case TaskCategory.ocio:        return 'Entretenimiento';
       case TaskCategory.reading:     return 'Leer';
       case TaskCategory.research:    return 'Investigar';
       case TaskCategory.gaming:      return 'Gaming';
@@ -39,7 +39,7 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.sports:      return Icons.fitness_center_rounded;
       case TaskCategory.food:        return Icons.restaurant_rounded;
       case TaskCategory.custom:      return Icons.tag_rounded;
-      case TaskCategory.ocio:        return Icons.weekend_rounded;
+      case TaskCategory.ocio:        return Icons.local_movies_rounded;
       case TaskCategory.reading:     return Icons.menu_book_rounded;
       case TaskCategory.research:    return Icons.science_rounded;
       case TaskCategory.gaming:      return Icons.videogame_asset_rounded;
@@ -56,7 +56,7 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.leisure:     return AppTheme.catLeisure;
       case TaskCategory.sports:      return AppTheme.catSports;
       case TaskCategory.food:        return AppTheme.catFood;
-      case TaskCategory.custom:      return AppTheme.neonCyan;
+      case TaskCategory.custom:      return AppTheme.catCustom;
       case TaskCategory.ocio:        return AppTheme.catOcio;
       case TaskCategory.reading:     return AppTheme.catReading;
       case TaskCategory.research:    return AppTheme.catResearch;

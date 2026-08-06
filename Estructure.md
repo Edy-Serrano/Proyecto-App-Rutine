@@ -16,7 +16,7 @@ El punto de entrada de la aplicación. Configura la inicialización de los servi
 ### 📁 `models/`
 Contiene las clases y estructuras de datos puras que representan la información de negocio de la aplicación.
 
-* **`task_model.dart`**: Define la clase `Task` (identificador, título, descripción, fecha, hora, estado de completado, estado de postergado `isPostponed` con enlace a su predecesora `postponedFromId`, días de recurrencia, minutos de recordatorio, historial de tiempos `history` con `TimeLog`, y metadatos nutricionales `foodMetadata`). También aloja el enum `TaskCategory` con sus respectivas extensiones para obtener iconos, nombres y colores (Higiene, Universidad, Trabajo, Compras, Paseo, Deporte, Comida, Otro, Ocio, Leer, Investigar, Gaming, Meditación).
+* **`task_model.dart`**: Define la clase `Task` (identificador, título, descripción, fecha, hora, estado de completado, estado de postergado `isPostponed` con enlace a su predecesora `postponedFromId`, días de recurrencia, minutos de recordatorio, historial de tiempos `history` con `TimeLog`, y metadatos nutricionales `foodMetadata`). También aloja el enum `TaskCategory` con sus respectivas extensiones para obtener iconos, nombres y colores (Higiene, Universidad, Trabajo, Compras, Paseo, Deporte, Comida, Otro, Entretenimiento, Leer, Investigar, Gaming, Meditación).
 
 ---
 
