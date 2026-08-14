@@ -35,10 +35,10 @@ Controla el estado global y la lógica de negocio activa, comunicando los servic
 Contiene la Interfaz de Usuario (UI). Son los widgets (Stateful o Stateless) con los que interactúa el usuario directamente.
 
 * **`main_navigation.dart`**: Es el armazón base (Scaffold) que aloja la barra de navegación inferior (BottomNavigationBar) y controla qué pantalla se está mostrando actualmente.
-* **`dashboard_screen.dart`**: Pantalla de "Inicio". Muestra el saludo inicial (según la hora del día), la Frase del Día con gamificación para ganar rachas extra, el progreso circular del día actual y una lista de las tareas pendientes para hoy. Soporta interacciones táctiles completas (deslizar para completar/borrar, toque corto para detalles e historial de tiempo, toque largo para editar y posponer).
+* **`dashboard_screen.dart`**: Pantalla de "Inicio". Muestra el saludo inicial (según la hora del día), el **Reto Diario Interactivo** (de confort) con niveles y botones para ganar rachas especiales, el progreso circular del día actual y una lista de las tareas pendientes para hoy. Soporta interacciones táctiles completas (deslizar para completar/borrar, toque corto para detalles e historial de tiempo, toque largo para editar y posponer).
 * **`agenda_screen.dart`**: Vista de calendario. Usa un selector semanal deslizante. Permite ver las tareas asignadas a cualquier día en específico y también soporta acciones rápidas como marcar completado e interacciones para registro de tiempo.
-* **`stats_screen.dart`**: Panel de métricas dinámico. Toda la pantalla reacciona a la fecha seleccionada en el calendario, recalculando al instante: resúmenes semanales/mensuales generales y por categoría, progreso específico por tarea filtrado por mes, distribución de tiempo invertido, gráficos de pastel duales (diario y mensual) basados en tiempo en horas/minutos, y una subsección de "Nutrición" para la categoría Comida.
-* **`profile_screen.dart`**: Pantalla de preferencias. Permite gestionar datos personales (nombre, foto de perfil), cambiar el modo visual (Claro/Oscuro), gestionar alertas locales y generar respaldos seguros de datos (cifrados con AES-256) exportables mediante share_plus.
+* **`stats_screen.dart`**: Panel de métricas dinámico. Toda la pantalla reacciona a la fecha seleccionada en el calendario, recalculando al instante: resúmenes semanales/mensuales generales y por categoría, progreso específico por tarea filtrado por mes, distribución de tiempo invertido, gráficos de pastel duales (diario y mensual) basados en tiempo en horas/minutos, y una subsección de "Nutrición" para la categoría Comida. Incluye exportación en CSV.
+* **`profile_screen.dart`**: Pantalla de preferencias. Permite gestionar datos personales (nombre, foto de perfil), visualizar el **Título de Gamificación** y la **Racha de Confort**, cambiar el modo visual (Claro/Oscuro), gestionar alertas locales, exportar estadísticas en CSV (detectando dinámicamente meses con actividad) y generar respaldos seguros de datos (cifrados con AES-256) exportables mediante share_plus.
 * **`add_task_sheet.dart`**: Es un `BottomSheet` dinámico y reutilizable que funge como formulario interactivo. Permite crear **nuevas tareas**, **editar tareas existentes**, o **posponer** tareas a nuevas fechas registrando el tiempo ya invertido. Cuenta con selectores estilizados para categoría, calendario de fechas, horas, y un panel nutricional especializado (si la categoría es `Food`).
 
 ---
@@ -61,7 +61,7 @@ Agrupa los tokens de diseño y configuraciones estéticas de la app.
 ### 📁 `utils/`
 Clases auxiliares y herramientas de cálculo global.
 
-* **`quotes_repository.dart`**: Maneja el banco de 366 frases de la aplicación y la lógica para obtener la frase correspondiente al día del año actual (incluso en años bisiestos), orientadas al crecimiento personal y a la asertividad.
+* **`challenge_repository.dart`**: Maneja el banco de 100 retos de zona de confort clasificados en 4 niveles de dificultad y la lógica para obtener un reto diferente cada día del año.
 
 ---
 

@@ -3,6 +3,25 @@ import 'package:rutine/theme/app_theme.dart';
 
 enum TaskCategory { hygiene, university, work, shopping, leisure, sports, food, custom, ocio, reading, research, gaming, meditation }
 
+enum TaskPriority { normal, important, strict }
+
+extension TaskPriorityExtension on TaskPriority {
+  String get label {
+    switch (this) {
+      case TaskPriority.normal: return 'Normal';
+      case TaskPriority.important: return 'Importante';
+      case TaskPriority.strict: return 'Estricta';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case TaskPriority.normal: return Colors.grey;
+      case TaskPriority.important: return Colors.orange;
+      case TaskPriority.strict: return Colors.red;
+    }
+  }
+}
 extension TaskCategoryExtension on TaskCategory {
   static List<TaskCategory> get uiOrder {
     final list = TaskCategory.values.toList();
@@ -97,7 +116,11 @@ class Task {
   TaskCategory category;
   DateTime date;
   TimeOfDay? time;
+  TimeOfDay? endTime;
+  TaskPriority priority;
   bool isCompleted;
+  bool isCancelled;
+  String? cancelReason;
   bool isPostponed;        // true si fue postergada (queda en el día original con check)
   String? postponedFromId; // id de la tarea predecesora si esta es una continuación
   bool isRecurring;
@@ -115,7 +138,11 @@ class Task {
     required this.category,
     required this.date,
     this.time,
+    this.endTime,
+    this.priority = TaskPriority.normal,
     this.isCompleted = false,
+    this.isCancelled = false,
+    this.cancelReason,
     this.isPostponed = false,
     this.postponedFromId,
     this.isRecurring = false,
@@ -134,7 +161,11 @@ class Task {
     TaskCategory? category,
     DateTime? date,
     TimeOfDay? time,
+    TimeOfDay? endTime,
+    TaskPriority? priority,
     bool? isCompleted,
+    bool? isCancelled,
+    String? cancelReason,
     bool? isPostponed,
     String? postponedFromId,
     bool? isRecurring,
@@ -152,7 +183,11 @@ class Task {
       category: category ?? this.category,
       date: date ?? this.date,
       time: time ?? this.time,
+      endTime: endTime ?? this.endTime,
+      priority: priority ?? this.priority,
       isCompleted: isCompleted ?? this.isCompleted,
+      isCancelled: isCancelled ?? this.isCancelled,
+      cancelReason: cancelReason ?? this.cancelReason,
       isPostponed: isPostponed ?? this.isPostponed,
       postponedFromId: postponedFromId ?? this.postponedFromId,
       isRecurring: isRecurring ?? this.isRecurring,
@@ -174,7 +209,12 @@ class Task {
       'date': date.toIso8601String(),
       'timeHour': time?.hour,
       'timeMinute': time?.minute,
+      'endTimeHour': endTime?.hour,
+      'endTimeMinute': endTime?.minute,
+      'priority': priority.index,
       'isCompleted': isCompleted,
+      'isCancelled': isCancelled,
+      'cancelReason': cancelReason,
       'isPostponed': isPostponed,
       'postponedFromId': postponedFromId,
       'isRecurring': isRecurring,
@@ -192,6 +232,10 @@ class Task {
     if (map['timeHour'] != null && map['timeMinute'] != null) {
       t = TimeOfDay(hour: map['timeHour'] as int, minute: map['timeMinute'] as int);
     }
+    TimeOfDay? eT;
+    if (map['endTimeHour'] != null && map['endTimeMinute'] != null) {
+      eT = TimeOfDay(hour: map['endTimeHour'] as int, minute: map['endTimeMinute'] as int);
+    }
     return Task(
       id: map['id'] as String,
       title: map['title'] as String,
@@ -199,7 +243,11 @@ class Task {
       category: TaskCategory.values[map['category'] as int? ?? 0],
       date: DateTime.parse(map['date'] as String),
       time: t,
+      endTime: eT,
+      priority: TaskPriority.values[map['priority'] as int? ?? 0],
       isCompleted: map['isCompleted'] as bool? ?? false,
+      isCancelled: map['isCancelled'] as bool? ?? false,
+      cancelReason: map['cancelReason'] as String?,
       isPostponed: map['isPostponed'] as bool? ?? false,
       postponedFromId: map['postponedFromId'] as String?,
       isRecurring: map['isRecurring'] as bool? ?? false,

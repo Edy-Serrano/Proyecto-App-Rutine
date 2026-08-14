@@ -4,12 +4,14 @@ import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:rutine/models/task_model.dart';
+import 'package:rutine/models/goal_model.dart';
 import 'package:encrypt/encrypt.dart' as enc;
 import 'package:path_provider/path_provider.dart';
 
 class HiveService {
   static const String _tasksBoxName = 'tasksBox';
   static const String _prefsBoxName = 'prefsBox';
+  static const String _goalsBoxName = 'goalsBox';
   static const String _keyName = 'hive_encryption_key';
   
   static late Uint8List _encryptionKey;
@@ -61,10 +63,25 @@ class HiveService {
       final newBox = await Hive.openBox(_prefsBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
       await newBox.putAll(mapData);
     }
+
+    // MIGRATION: goalsBox
+    try {
+      await Hive.openBox(_goalsBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
+    } catch (e) {
+      print("Migrating $_goalsBoxName to encrypted...");
+      final unencryptedBox = await Hive.openBox(_goalsBoxName);
+      final mapData = Map<dynamic, dynamic>.from(unencryptedBox.toMap());
+      await unencryptedBox.close();
+      await Hive.deleteBoxFromDisk(_goalsBoxName);
+      
+      final newBox = await Hive.openBox(_goalsBoxName, encryptionCipher: HiveAesCipher(_encryptionKey));
+      await newBox.putAll(mapData);
+    }
   }
 
   static Box get _box => Hive.box(_tasksBoxName);
   static Box get _prefsBox => Hive.box(_prefsBoxName);
+  static Box get _goalsBox => Hive.box(_goalsBoxName);
 
   /// Migra las entradas con clave numérica al nuevo esquema con clave = task.id
   static Future<void> _migrateToKeyedStorage() async {
@@ -128,6 +145,27 @@ class HiveService {
     await _box.delete(taskId);
   }
 
+  // ─── GOALS ────────────────────────────────────────────────────────────────
+  
+  static List<MonthlyGoal> getGoals() {
+    final List<MonthlyGoal> goals = [];
+    for (final key in _goalsBox.keys) {
+      final map = _goalsBox.get(key) as Map<dynamic, dynamic>?;
+      if (map != null) {
+        try {
+          goals.add(MonthlyGoal.fromMap(map));
+        } catch (e) {
+          print("Error parsing goal key=$key: $e");
+        }
+      }
+    }
+    return goals;
+  }
+
+  static Future<void> saveGoal(MonthlyGoal goal) async {
+    await _goalsBox.put(goal.id, goal.toMap());
+  }
+
 
   // ─── PREFERENCIAS ─────────────────────────────────────────────────────────
 
@@ -169,6 +207,22 @@ class HiveService {
 
   static Future<void> setHasCheckedQuoteToday(String dateStr, bool checked) async {
     await _prefsBox.put('checkedQuote_$dateStr', checked);
+  }
+
+  static int getChallengeStreak() {
+    return _prefsBox.get('challengeStreak', defaultValue: 0);
+  }
+
+  static Future<void> setChallengeStreak(int streak) async {
+    await _prefsBox.put('challengeStreak', streak);
+  }
+
+  static bool getHasCompletedChallengeToday(String dateStr) {
+    return _prefsBox.get('challengeCompleted_$dateStr', defaultValue: false);
+  }
+
+  static Future<void> setHasCompletedChallengeToday(String dateStr, bool completed) async {
+    await _prefsBox.put('challengeCompleted_$dateStr', completed);
   }
 
   // ─── BACKUP Y SEGURIDAD ───────────────────────────────────────────────────

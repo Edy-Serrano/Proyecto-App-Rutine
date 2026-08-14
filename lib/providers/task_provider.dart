@@ -543,6 +543,22 @@ class TaskProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> cancelTask(String id, String reason) async {
+    final index = _tasks.indexWhere((t) => t.id == id);
+    if (index != -1) {
+      final task = _tasks[index];
+      final cancelledTask = task.copyWith(
+        isCancelled: true,
+        cancelReason: reason,
+        isCompleted: false, // Ensure it's not completed
+      );
+      _tasks[index] = cancelledTask;
+      await HiveService.updateTask(cancelledTask);
+      await NotificationService.cancelNotification(cancelledTask.id.hashCode);
+      notifyListeners();
+    }
+  }
+
   Future<void> updateRecurringFutureTasks(Task updatedTemplate) async {
     final groupId = updatedTemplate.recurringGroupId;
     if (groupId == null) return;

@@ -24,10 +24,12 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
    - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu actividad (10, 15, 30 minutos, etc).
 
 3. **Gamificación y Estadísticas Interactivas:**
-   - Panel de control principal con porcentaje de progreso en tiempo real y **Frase del Día** motivacional, con botones para ganar rachas extras.
+   - Panel de control principal con porcentaje de progreso en tiempo real y un **Reto Diario Interactivo** (de Zona de Confort) con botones para ganar rachas especiales.
    - Panel interactivo de estadísticas (`StatsScreen`) con selección por fechas para analizar:
      - El **Tiempo Invertido** por cada categoría y porcentaje de tu tiempo productivo en el día.
      - Gráficas y tarjetas dinámicas que te muestran tu progreso.
+     - Posibilidad de **Exportar Estadísticas a CSV** para visualizarlas en Excel, detectando inteligentemente solo los meses en los que tienes actividad real.
+   - Perfil con **Títulos de Gamificación** según tu racha general y una Racha de Confort independiente.
    - Contadores numéricos que premian los días perfectos consecutivos (Mejor Racha y Racha Actual).
 
 4. **Registro de Tiempo y Postergación Inteligente (Time Tracking):**
@@ -54,7 +56,7 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ### Pantalla de Inicio (Dashboard)
 - Es lo primero que ves al abrir la app. Se enfoca exclusivamente en **tu día de hoy**.
-- **Frase del Día:** Empieza el día con una frase motivacional de asertividad. Pulsa en "¿Pusiste a prueba la frase?" para ganar un bono en tu racha.
+- **Reto del Día:** Sal de tu zona de confort con un reto diario clasificado por niveles. Pulsa en "¡Lo cumplí!" para sumar días a tu Racha de Confort especial.
 - **Completar tarea:** Simplemente toca el círculo (checkbox) o desliza (swipe) la tarea de izquierda a derecha. ¡Aparecerá un menú preguntándote cuánto tiempo le dedicaste hoy!
 - **Ver Detalles:** Toca la tarjeta de la tarea (sobre el texto) para leer su descripción completa y ver todo su **Historial de Tiempo (Timeline)** acumulado.
 - **Editar o Posponer:** Mantén presionada cualquier tarea que necesites modificar. Si hoy no la terminaste, usa el botón "Posponer a otro día" para registrar el avance de hoy y cambiar su fecha sin perder su historial.
@@ -74,8 +76,11 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ### Perfil y Configuración
 - Personaliza tu experiencia. Toca el botón de cambiar Foto de Perfil o modifica tu nombre de usuario.
-- Activa o desactiva la paleta visual (Modo Oscuro/Claro).
-- Enciende o apaga por completo las notificaciones para que nada te moleste en tu tiempo libre.
+- Observa tu **Título de Gamificación** y tu **Racha de Confort** debajo de tu foto.
+- En los **Ajustes Generales**:
+  - Activa o desactiva la paleta visual (Modo Oscuro/Claro).
+  - Enciende o apaga por completo las notificaciones.
+  - **Exportar Estadísticas:** La aplicación detecta dinámicamente en qué meses has registrado productividad y te permite exportarlos en formato CSV.
 
 ---
 

@@ -21,6 +21,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   TaskCategory _selectedCategory = TaskCategory.hygiene;
   DateTime _selectedDate = DateTime.now();
   TimeOfDay? _selectedTime;
+  TimeOfDay? _selectedEndTime;
+  TaskPriority _selectedPriority = TaskPriority.normal;
   bool _isRecurring = false;
   DateTime? _recurringEndDate;
   final Set<int> _recurringDays = {}; // 1=Lun ... 7=Dom
@@ -43,6 +45,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       _selectedCategory = t.category;
       _selectedDate = t.date;
       _selectedTime = t.time;
+      _selectedEndTime = t.endTime;
+      _selectedPriority = t.priority;
       _isRecurring = t.isRecurring;
       _recurringEndDate = t.recurringEndDate;
       _recurringDays.addAll(t.recurringDays);
@@ -67,7 +71,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     super.dispose();
   }
 
-  void _save() {
+  void _save() async {
     if (_titleController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -103,6 +107,62 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     }
     int? notifMins = int.tryParse(_notifController.text.trim());
 
+    if (_selectedTime != null) {
+      final providerTasks = widget.provider.tasksForDate(_selectedDate).where((t) => t.id != widget.taskToEdit?.id).toList();
+      final start = _selectedTime!.hour * 60 + _selectedTime!.minute;
+      final end = _selectedEndTime != null ? (_selectedEndTime!.hour * 60 + _selectedEndTime!.minute) : (start + 60);
+
+      for (var existingTask in providerTasks) {
+        if (existingTask.time == null || existingTask.isCancelled) continue;
+        final exStart = existingTask.time!.hour * 60 + existingTask.time!.minute;
+        final exEnd = existingTask.endTime != null ? (existingTask.endTime!.hour * 60 + existingTask.endTime!.minute) : (exStart + 60);
+
+        bool overlaps = (start < exEnd && exStart < end);
+        bool tooClose = false;
+        
+        if (!overlaps) {
+           if (start >= exEnd && (start - exEnd) < 20) tooClose = true;
+           if (exStart >= end && (exStart - end) < 20) tooClose = true;
+        }
+
+        if (overlaps || tooClose) {
+          final isStrict = existingTask.priority == TaskPriority.strict;
+          if (!mounted) return;
+          bool? proceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              backgroundColor: AppTheme.bgCard,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: Row(children: [
+                Icon(Icons.warning_amber_rounded, color: AppTheme.neonPink),
+                const SizedBox(width: 8),
+                const Text('Actividad apretada', style: TextStyle(color: Colors.white, fontSize: 18)),
+              ]),
+              content: Text(
+                isStrict
+                    ? 'Hay un cruce o muy poco margen (menos de 20 min) con "${existingTask.title}", la cual tiene prioridad ESTRICTA. Debes cambiar la hora.'
+                    : 'Hay un cruce o menos de 20 minutos de margen con "${existingTask.title}". ¿Deseas guardarla de todas formas?',
+                style: TextStyle(color: AppTheme.textSecondary),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(isStrict ? 'Entendido' : 'Editar hora', style: TextStyle(color: AppTheme.textMuted)),
+                ),
+                if (!isStrict)
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonPink),
+                    child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+                  ),
+              ],
+            )
+          );
+          if (proceed != true) return;
+        }
+      }
+    }
+
     if (widget.taskToEdit != null) {
       final updated = widget.taskToEdit!.copyWith(
         title: _titleController.text.trim(),
@@ -110,6 +170,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         category: _selectedCategory,
         date: _selectedDate,
         time: _selectedTime,
+        endTime: _selectedEndTime,
+        priority: _selectedPriority,
         isRecurring: _isRecurring,
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
         notificationMinutes: notifMins,
@@ -158,6 +220,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         category: _selectedCategory,
         date: _selectedDate,
         time: _selectedTime,
+        endTime: _selectedEndTime,
+        priority: _selectedPriority,
         isRecurring: _isRecurring,
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
         recurringEndDate: _isRecurring ? _recurringEndDate : null,
@@ -232,6 +296,25 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       ),
     );
     if (picked != null) setState(() => _selectedTime = picked);
+  }
+
+  Future<void> _pickEndTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedEndTime ?? _selectedTime ?? TimeOfDay.now(),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: AppTheme.neonPurple,
+            onPrimary: Colors.white,
+            surface: AppTheme.bgCard,
+            onSurface: AppTheme.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _selectedEndTime = picked);
   }
 
   @override
@@ -325,13 +408,32 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                 Expanded(child: _buildChip(
                   icon: Icons.schedule_rounded,
                   label: _selectedTime == null
-                      ? 'Sin hora'
+                      ? 'Inicio (Opcional)'
                       : '${_selectedTime!.hour.toString().padLeft(2, '0')}:${_selectedTime!.minute.toString().padLeft(2, '0')}',
                   color: AppTheme.neonCyan,
                   onTap: _pickTime,
                 )),
+                const SizedBox(width: 10),
+                Expanded(child: _buildChip(
+                  icon: Icons.update_rounded,
+                  label: _selectedEndTime == null
+                      ? 'Fin (Opcional)'
+                      : '${_selectedEndTime!.hour.toString().padLeft(2, '0')}:${_selectedEndTime!.minute.toString().padLeft(2, '0')}',
+                  color: AppTheme.neonPink,
+                  onTap: _pickEndTime,
+                )),
               ],
             ),
+            const SizedBox(height: 20),
+
+            // === PRIORIDAD ===
+            Text('Prioridad',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: AppTheme.textSecondary)),
+            const SizedBox(height: 10),
+            _buildPrioritySelector(),
             const SizedBox(height: 20),
 
             // === RECURRENTE ===
@@ -448,6 +550,45 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
                     ),
                   ),
                 ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPrioritySelector() {
+    return SizedBox(
+      height: 45,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        children: TaskPriority.values.map((p) {
+          final isSelected = _selectedPriority == p;
+          return GestureDetector(
+            onTap: () => setState(() => _selectedPriority = p),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? p.color.withOpacity(0.2)
+                    : AppTheme.bgSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isSelected ? p.color : Colors.transparent,
+                  width: 2,
+                ),
+              ),
+              child: Center(
+                child: Text(
+                  p.label,
+                  style: TextStyle(
+                    color: isSelected ? p.color : AppTheme.textMuted,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                  ),
+                ),
               ),
             ),
           );

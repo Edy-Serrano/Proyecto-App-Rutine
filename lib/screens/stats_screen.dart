@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/models/task_model.dart';
+import 'package:rutine/models/goal_model.dart';
 import 'package:rutine/providers/task_provider.dart';
+import 'package:rutine/services/hive_service.dart';
 
 class StatsScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -32,6 +34,7 @@ class _StatsScreenState extends State<StatsScreen> {
   late Map<TaskCategory, int> _timeInvestedMonthly;
   late int _totalTime;
   late Map<String, int> _foodData;
+  late List<MonthlyGoal> _goals;
 
   @override
   void initState() {
@@ -76,6 +79,7 @@ class _StatsScreenState extends State<StatsScreen> {
     _timeInvestedMonthly = widget.provider.timeInvestedByCategoryMonthly(_selectedDate);
     _totalTime = widget.provider.totalTimeInvested(_selectedDate);
     _foodData = widget.provider.foodStats(_selectedDate);
+    _goals = HiveService.getGoals();
   }
 
   void _changeDate(DateTime newDate) {
@@ -102,6 +106,7 @@ class _StatsScreenState extends State<StatsScreen> {
     final foodData = _foodData;
     final byTaskName = _byTaskName;
     final totalByTaskName = _totalByTaskName;
+    final monthGoals = _goals.where((g) => g.month == _selectedDate.month && g.year == _selectedDate.year).toList();
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -140,23 +145,59 @@ class _StatsScreenState extends State<StatsScreen> {
               }),
             const SizedBox(height: 32),
 
-            // === ESTADÍSTICAS DE NUTRICIÓN (FOOD) ===
-            _buildSectionTitle(context, '🥗 Nutrición de Hoy'),
+            // === METAS MENSUALES ===
+            _buildSectionTitle(context, '🎯 Metas del Mes'),
             const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildFoodStatCard(context, 'Agua', '${foodData['water']} vasos', Icons.water_drop_rounded, AppTheme.neonCyan),
+            if (monthGoals.isEmpty)
+              Text('Aún no tienes metas para este mes.', style: TextStyle(color: AppTheme.textMuted))
+            else
+              ...monthGoals.map((goal) {
+                final investedMinutes = timeInvestedMonthly[goal.category] ?? 0;
+                final percentage = goal.targetMinutes > 0 ? (investedMinutes / goal.targetMinutes) : 0.0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(goal.category.icon, color: goal.category.color, size: 20),
+                              const SizedBox(width: 8),
+                              Text(goal.category.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                            ]
+                          ),
+                          Text('${_formatMinutes(investedMinutes)} / ${_formatMinutes(goal.targetMinutes)}', style: TextStyle(color: AppTheme.textSecondary)),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: percentage > 1.0 ? 1.0 : percentage,
+                          backgroundColor: AppTheme.bgSurface,
+                          valueColor: AlwaysStoppedAnimation<Color>(goal.category.color),
+                          minHeight: 8,
+                        ),
+                      ),
+                    ]
+                  ),
+                );
+              }),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: TextButton.icon(
+                onPressed: _showAddGoalDialog,
+                icon: const Icon(Icons.add_rounded, color: AppTheme.neonPurple),
+                label: const Text('Configurar Metas', style: TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold)),
+                style: TextButton.styleFrom(
+                  backgroundColor: AppTheme.neonPurple.withOpacity(0.1),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildFoodStatCard(context, 'Proteínas', '${foodData['protein']}g', Icons.fitness_center_rounded, AppTheme.neonPink),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildFoodStatCard(context, 'Carbs', '${foodData['carbs']}g', Icons.breakfast_dining_rounded, AppTheme.catFood),
-                ),
-              ],
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -228,19 +269,6 @@ class _StatsScreenState extends State<StatsScreen> {
               }),
               const SizedBox(height: 28),
             ],
-
-            // === PROGRESO POR TAREA ESPECÍFICA ===
-            _buildSectionTitle(context, '🎯 Por tarea específica'),
-            const SizedBox(height: 12),
-            if (totalByTaskName.isEmpty)
-              Text('No hay tareas registradas', style: TextStyle(color: AppTheme.textMuted))
-            else
-              ...totalByTaskName.entries.map((entry) {
-                final taskName = entry.key;
-                final total = entry.value;
-                final completed = byTaskName[taskName] ?? 0;
-                return _buildTaskNameRow(context, taskName, completed, total);
-              }),
 
             // === PIE CHART DIARIO ===
             if (timeInvested.isNotEmpty) ...[
@@ -638,6 +666,98 @@ class _StatsScreenState extends State<StatsScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showAddGoalDialog() async {
+    TaskCategory selectedCat = TaskCategoryExtension.uiOrder.first;
+    int targetHours = 10;
+    
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setState) {
+          return AlertDialog(
+            backgroundColor: AppTheme.bgCard,
+            title: const Text('Nueva Meta Mensual', style: TextStyle(color: Colors.white)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Categoría', style: TextStyle(color: AppTheme.textSecondary)),
+                const SizedBox(height: 8),
+                DropdownButtonFormField<TaskCategory>(
+                  value: selectedCat,
+                  dropdownColor: AppTheme.bgSurface,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: AppTheme.bgSurface,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                  items: TaskCategoryExtension.uiOrder.map((cat) {
+                    return DropdownMenuItem(
+                      value: cat,
+                      child: Row(
+                        children: [
+                          Icon(cat.icon, color: cat.color, size: 18),
+                          const SizedBox(width: 8),
+                          Text(cat.label, style: TextStyle(color: cat.color)),
+                        ],
+                      ),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    if (val != null) setState(() => selectedCat = val);
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text('Objetivo en Horas', style: TextStyle(color: AppTheme.textSecondary)),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove_circle_outline, color: AppTheme.neonPink),
+                      onPressed: targetHours > 1 ? () => setState(() => targetHours--) : null,
+                    ),
+                    Text('$targetHours h', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(
+                      icon: const Icon(Icons.add_circle_outline, color: AppTheme.neonCyan),
+                      onPressed: () => setState(() => targetHours++),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancelar', style: TextStyle(color: AppTheme.textMuted)),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final goal = MonthlyGoal(
+                    id: DateTime.now().millisecondsSinceEpoch.toString(),
+                    category: selectedCat,
+                    targetMinutes: targetHours * 60,
+                    month: _selectedDate.month,
+                    year: _selectedDate.year,
+                  );
+                  await HiveService.saveGoal(goal);
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    _recalcAll();
+                    this.setState(() {});
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonPurple),
+                child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        }
       ),
     );
   }

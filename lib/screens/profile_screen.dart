@@ -6,6 +6,7 @@ import 'package:rutine/providers/task_provider.dart';
 import 'package:rutine/providers/theme_provider.dart';
 import 'package:rutine/services/hive_service.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:rutine/models/task_model.dart';
 
 class ProfileScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -41,6 +42,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
       _nameController.text = widget.provider.userName;
     }
     setState(() => _isEditing = false);
+  }
+
+  String _getGamificationTitle(int streak) {
+    if (streak < 3) return "🌱 Principiante";
+    if (streak < 7) return "🔥 Constante";
+    if (streak < 14) return "⚡ Avanzado";
+    if (streak < 30) return "👑 Maestro de Rutinas";
+    return "🚀 Leyenda Imparable";
   }
 
   Future<void> _pickImage(ImageSource source) async {
@@ -224,8 +233,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          '${widget.provider.tasks.length} tareas registradas',
-                          style: TextStyle(color: AppTheme.textMuted, fontSize: 14),
+                          _getGamificationTitle(widget.provider.currentStreak),
+                          style: const TextStyle(color: AppTheme.neonCyan, fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Racha de Confort: ${HiveService.getChallengeStreak()} 🔥',
+                          style: TextStyle(color: AppTheme.neonPink.withOpacity(0.9), fontSize: 13, fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -265,6 +279,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 final file = await HiveService.exportSecureBackup();
                 await Share.shareXFiles([XFile(file.path)], text: 'Respaldo de Rutine (Cifrado)');
               },
+            ),
+            _buildSettingsTile(
+              icon: Icons.insert_chart_outlined_rounded,
+              iconColor: Colors.green,
+              title: 'Exportar Estadísticas',
+              subtitle: 'Descargar datos en formato CSV',
+              onTap: () => _showExportDialog(context),
             ),
             
             const SizedBox(height: 32),
@@ -352,5 +373,92 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ),
       ),
     );
+  }
+
+  Future<void> _showExportDialog(BuildContext context) async {
+    final tasks = widget.provider.tasks;
+    final Set<String> uniqueMonths = {};
+    
+    // Recopilar meses con actividad
+    for (var t in tasks) {
+      final history = widget.provider.getFullHistory(t);
+      for (var log in history) {
+        uniqueMonths.add('${log.date.year}-${log.date.month.toString().padLeft(2, '0')}');
+      }
+    }
+
+    final List<DateTime> months = uniqueMonths.map((m) {
+      final parts = m.split('-');
+      return DateTime(int.parse(parts[0]), int.parse(parts[1]), 1);
+    }).toList();
+
+    // Ordenar de más reciente a más antiguo
+    months.sort((a, b) => b.compareTo(a));
+
+    const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Exportar Estadísticas', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              if (months.isEmpty) ...[
+                Text('Aún no tienes tareas con tiempo registrado.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary)),
+                const SizedBox(height: 16),
+              ] else ...[
+                Text('Selecciona el mes a exportar:', style: TextStyle(color: AppTheme.textSecondary)),
+                const SizedBox(height: 16),
+                ...months.map((d) {
+                  return ListTile(
+                    title: Text('${monthNames[d.month - 1]} ${d.year}', style: const TextStyle(color: Colors.white)),
+                    trailing: const Icon(Icons.download_rounded, color: Colors.green),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _generateAndShareCSV(d);
+                    },
+                  );
+                }),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _generateAndShareCSV(DateTime date) async {
+    try {
+      final tasks = widget.provider.tasks;
+      String csv = "Tarea,Categoria,Completada,Minutos_Invertidos_Mes,Fecha_Creacion\n";
+
+      for (var t in tasks) {
+        int minutes = 0;
+        final history = widget.provider.getFullHistory(t);
+        for (var log in history) {
+          if (log.date.month == date.month && log.date.year == date.year) {
+            minutes += log.minutes;
+          }
+        }
+        
+        csv += '"${t.title}","${t.category.label}",${t.isCompleted},${minutes},"${t.date.toIso8601String()}"\n';
+      }
+
+      final dir = await Directory.systemTemp.createTemp();
+      final file = File('${dir.path}/estadisticas_${date.month}_${date.year}.csv');
+      await file.writeAsString(csv);
+      
+      await Share.shareXFiles([XFile(file.path)], text: 'Estadísticas de Rutine - Mes ${date.month}/${date.year}');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al exportar: $e')),
+      );
+    }
   }
 }
