@@ -118,8 +118,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 20),
 
                   // === TARJETA DE PROGRESO DEL DÍA ===
-                  _buildProgressCard(context, completionRate, todayTasks.length,
-                      todayTasks.where((t) => t.isCompleted).length),
+                  _buildProgressCard(
+                      context, 
+                      completionRate, 
+                      todayTasks.where((t) => !t.isCancelled).length,
+                      todayTasks.where((t) => t.isCompleted && !t.isCancelled).length),
 
                   const SizedBox(height: 28),
 
@@ -132,7 +135,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       Text(
-                        '${todayTasks.where((t) => t.isCompleted).length}/${todayTasks.length}',
+                        '${todayTasks.where((t) => t.isCompleted && !t.isCancelled).length}/${todayTasks.where((t) => !t.isCancelled).length}',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: AppTheme.neonCyan,
                             ),
@@ -325,11 +328,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                           decoration:
                               (task.isCompleted || task.isCancelled) ? TextDecoration.lineThrough : null,
-                          color: task.isCompleted
+                          decorationColor: task.isCancelled ? Colors.redAccent : null,
+                          color: (task.isCompleted || task.isCancelled)
                               ? AppTheme.textMuted
-                              : task.isCancelled
-                                  ? AppTheme.neonPink.withOpacity(0.7)
-                                  : AppTheme.textPrimary,
+                              : AppTheme.textPrimary,
                         ),
                   ),
                   if (task.time != null || task.isPostponed) ...[
@@ -392,20 +394,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 height: 26,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: task.isCompleted
-                      ? AppTheme.neonGreen
-                      : Colors.transparent,
+                  color: task.isCancelled
+                      ? Colors.redAccent
+                      : task.isCompleted
+                          ? AppTheme.neonGreen
+                          : Colors.transparent,
                   border: Border.all(
-                    color: task.isCompleted
-                        ? AppTheme.neonGreen
-                        : AppTheme.textMuted,
+                    color: task.isCancelled
+                        ? Colors.redAccent
+                        : task.isCompleted
+                            ? AppTheme.neonGreen
+                            : AppTheme.textMuted,
                     width: 2,
                   ),
                 ),
-                child: task.isCompleted
-                    ? const Icon(Icons.check_rounded,
+                child: task.isCancelled
+                    ? const Icon(Icons.close_rounded,
                         size: 16, color: Colors.white)
-                    : null,
+                    : task.isCompleted
+                        ? const Icon(Icons.check_rounded,
+                            size: 16, color: Colors.white)
+                        : null,
               ),
             ),
           ],

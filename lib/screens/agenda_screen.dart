@@ -63,7 +63,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
           _buildCalendarGrid(),
           const SizedBox(height: 8),
           // === MINI STAT DEL DÍA ===
-          if (tasksForDay.isNotEmpty) _buildDayStatBar(rate, tasksForDay.length),
+          if (tasksForDay.isNotEmpty) _buildDayStatBar(rate, tasksForDay.where((t) => !t.isCancelled).length),
           // === LISTA DE TAREAS DEL DÍA ===
           Expanded(
             child: tasksForDay.isEmpty
@@ -293,9 +293,11 @@ class _AgendaScreenState extends State<AgendaScreen> {
         color: AppTheme.bgCard,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: task.isCompleted
-              ? AppTheme.neonGreen.withOpacity(0.3)
-              : task.category.color.withOpacity(0.2),
+          color: task.isCancelled
+              ? Colors.redAccent.withOpacity(0.3)
+              : task.isCompleted
+                  ? AppTheme.neonGreen.withOpacity(0.3)
+                  : task.category.color.withOpacity(0.2),
         ),
       ),
       child: Row(
@@ -333,16 +335,24 @@ class _AgendaScreenState extends State<AgendaScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: task.isCompleted ? AppTheme.neonGreen : task.category.color,
+                  color: task.isCancelled
+                      ? Colors.redAccent
+                      : task.isCompleted
+                          ? AppTheme.neonGreen
+                          : task.category.color,
                   width: 2,
                 ),
-                color: task.isCompleted
-                    ? AppTheme.neonGreen.withOpacity(0.2)
-                    : Colors.transparent,
+                color: task.isCancelled
+                    ? Colors.redAccent
+                    : task.isCompleted
+                        ? AppTheme.neonGreen.withOpacity(0.2)
+                        : Colors.transparent,
               ),
-              child: task.isCompleted
-                  ? const Icon(Icons.check, size: 14, color: AppTheme.neonGreen)
-                  : null,
+              child: task.isCancelled
+                  ? const Icon(Icons.close, size: 14, color: Colors.white)
+                  : task.isCompleted
+                      ? const Icon(Icons.check, size: 14, color: AppTheme.neonGreen)
+                      : null,
             ),
           ),
           Expanded(
@@ -352,12 +362,13 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 Text(
                   task.title,
                   style: TextStyle(
-                    color: task.isCompleted
+                    color: (task.isCompleted || task.isCancelled)
                         ? AppTheme.textMuted
                         : AppTheme.textPrimary,
-                    decoration: task.isCompleted
+                    decoration: (task.isCompleted || task.isCancelled)
                         ? TextDecoration.lineThrough
                         : null,
+                    decorationColor: task.isCancelled ? Colors.redAccent : null,
                     fontWeight: FontWeight.w500,
                     fontSize: 14,
                   ),
@@ -464,6 +475,33 @@ class _AgendaScreenState extends State<AgendaScreen> {
                 task.description?.isNotEmpty == true ? task.description! : 'Sin descripción',
                 style: TextStyle(color: AppTheme.textSecondary),
               ),
+              if (task.isCancelled) ...[
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.neonPink.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.neonPink.withOpacity(0.5)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.cancel_outlined, color: AppTheme.neonPink),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('Tarea Cancelada', style: TextStyle(color: AppTheme.neonPink, fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text('Motivo: ${task.cancelReason ?? "No especificado"}', style: const TextStyle(color: Colors.white70)),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (fullHistory.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Divider(color: AppTheme.bgSurface),

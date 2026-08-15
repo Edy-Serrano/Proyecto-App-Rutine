@@ -60,6 +60,8 @@ class TaskProvider extends ChangeNotifier {
       return sameDay || isLegacyRecurringToday;
     }).toList()
       ..sort((a, b) {
+        if (a.isCancelled && !b.isCancelled) return 1;
+        if (!a.isCancelled && b.isCancelled) return -1;
         if (a.time == null && b.time == null) return 0;
         if (a.time == null) return 1;
         if (b.time == null) return -1;
@@ -70,7 +72,7 @@ class TaskProvider extends ChangeNotifier {
 
   /// % de completitud de un día (0.0 - 1.0)
   double completionRateForDate(DateTime date) {
-    final dayTasks = tasksForDate(date);
+    final dayTasks = tasksForDate(date).where((t) => !t.isCancelled).toList();
     if (dayTasks.isEmpty) return 0.0;
     return dayTasks.where((t) => t.isCompleted).length / dayTasks.length;
   }
@@ -82,7 +84,7 @@ class TaskProvider extends ChangeNotifier {
     int days = 0;
     for (int i = 0; i < 7; i++) {
       final day = monday.add(Duration(days: i));
-      if (tasksForDate(day).isNotEmpty) {
+      if (tasksForDate(day).where((t) => !t.isCancelled).isNotEmpty) {
         total += completionRateForDate(day);
         days++;
       }
@@ -100,7 +102,7 @@ class TaskProvider extends ChangeNotifier {
       final day = DateTime(date.year, date.month, i);
       // Si el mes es el actual, no calculamos días futuros. Si es un mes pasado, calculamos todo el mes.
       if (day.year == now.year && day.month == now.month && day.isAfter(now)) break;
-      if (tasksForDate(day).isNotEmpty) {
+      if (tasksForDate(day).where((t) => !t.isCancelled).isNotEmpty) {
         total += completionRateForDate(day);
         days++;
       }
@@ -119,7 +121,7 @@ class TaskProvider extends ChangeNotifier {
       final allTasks = tasksForDate(day);
       
       for (var cat in TaskCategory.values) {
-        final catTasks = allTasks.where((t) => t.category == cat).toList();
+        final catTasks = allTasks.where((t) => t.category == cat && !t.isCancelled).toList();
         if (catTasks.isNotEmpty) {
           final completed = catTasks.where((t) => t.isCompleted).length;
           final rate = completed / catTasks.length;
@@ -149,7 +151,7 @@ class TaskProvider extends ChangeNotifier {
       
       final allTasks = tasksForDate(day);
       for (var cat in TaskCategory.values) {
-        final catTasks = allTasks.where((t) => t.category == cat).toList();
+        final catTasks = allTasks.where((t) => t.category == cat && !t.isCancelled).toList();
         if (catTasks.isNotEmpty) {
           final completed = catTasks.where((t) => t.isCompleted).length;
           final rate = completed / catTasks.length;

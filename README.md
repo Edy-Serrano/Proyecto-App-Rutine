@@ -56,10 +56,11 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ### Pantalla de Inicio (Dashboard)
 - Es lo primero que ves al abrir la app. Se enfoca exclusivamente en **tu día de hoy**.
-- **Reto del Día:** Sal de tu zona de confort con un reto diario clasificado por niveles. Pulsa en "¡Lo cumplí!" para sumar días a tu Racha de Confort especial.
+- **Frase/Reto del Día:** Empieza el día interactuando con retos de confort diarios clasificados por niveles. Pulsa en "¡Lo cumplí!" para sumar días a tu Racha de Confort especial.
 - **Completar tarea:** Simplemente toca el círculo (checkbox) o desliza (swipe) la tarea de izquierda a derecha. ¡Aparecerá un menú preguntándote cuánto tiempo le dedicaste hoy!
 - **Ver Detalles:** Toca la tarjeta de la tarea (sobre el texto) para leer su descripción completa y ver todo su **Historial de Tiempo (Timeline)** acumulado.
 - **Editar o Posponer:** Mantén presionada cualquier tarea que necesites modificar. Si hoy no la terminaste, usa el botón "Posponer a otro día" para registrar el avance de hoy y cambiar su fecha sin perder su historial.
+- **Cancelar Tarea:** Si decides que ya no harás una tarea, puedes marcarla como cancelada. Se te pedirá un "Motivo de Cancelación", el cual podrás leer en cualquier momento tocando la tarea (tanto en el Inicio como en la Agenda). Visualmente se marcará con una **línea roja tachada** y un círculo con una **'X'**, reordenándose automáticamente al final de la lista del día. Las tareas canceladas **no afectarán negativamente** tus métricas ni porcentajes de éxito en el panel de progreso o estadísticas.
 - **Borrar Tarea:** Desliza (swipe) una tarea completamente hacia la izquierda. (¡Cuidado, esta acción no se puede deshacer!).
 
 ### Agenda (Calendario Semanal)
