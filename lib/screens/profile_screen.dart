@@ -434,6 +434,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
+  // Evita que Excel interprete textos que inician con -, +, = o @ como fórmulas
+  String _sanitizeExcel(String text) {
+    if (text.isEmpty) return text;
+    if (text.startsWith('=') || text.startsWith('+') || text.startsWith('-') || text.startsWith('@')) {
+      return ' ' + text;
+    }
+    return text;
+  }
+
   Future<void> _generateAndShareCSV(DateTime date) async {
     try {
       final tasks = widget.provider.tasks.toList();
@@ -455,10 +464,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         
         if ((t.date.month == date.month && t.date.year == date.year) || minutes > 0) {
           String status = t.isCancelled ? 'Cancelada' : (t.isCompleted ? 'Completada' : 'Pendiente');
-          String desc = (t.description ?? '').replaceAll('"', '""');
-          String title = t.title.replaceAll('"', '""');
-          String cancelReason = (t.cancelReason ?? '').replaceAll('"', '""');
-          String allNotes = notesList.join(" | ");
+          String desc = _sanitizeExcel((t.description ?? '').replaceAll('"', '""'));
+          String title = _sanitizeExcel(t.title.replaceAll('"', '""'));
+          String cancelReason = _sanitizeExcel((t.cancelReason ?? '').replaceAll('"', '""'));
+          String allNotes = _sanitizeExcel(notesList.join(" | "));
           
           tasksCsv += '"$title","$desc","${t.category.label}","$status","$cancelReason",$minutes,"$allNotes","${t.date.toIso8601String()}"\n';
         }
@@ -501,18 +510,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
            final challenge = ChallengeRepository.getDailyChallenge(dayOfYear);
            
            String resultStr = success == true ? 'Lo cumplí' : (success == false ? 'No me atreví' : 'Sin respuesta');
-           String noteStr = note.replaceAll('"', '""');
-           String textStr = challenge.text.replaceAll('"', '""');
+           String noteStr = _sanitizeExcel(note.replaceAll('"', '""'));
+           String textStr = _sanitizeExcel(challenge.text.replaceAll('"', '""'));
            
            challengesCsv += '"$dateStr",${challenge.level},"$textStr","$resultStr","$noteStr"\n';
         }
       }
 
       final dir = await Directory.systemTemp.createTemp();
-      final tasksFile = File('${dir.path}/tareas_y_eventos_${date.month}_${date.year}.csv');
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      
+      final tasksFile = File('${dir.path}/tareas_y_eventos_${date.month}_${date.year}_$timestamp.csv');
       await tasksFile.writeAsString(tasksCsv);
       
-      final challengesFile = File('${dir.path}/retos_diarios_${date.month}_${date.year}.csv');
+      final challengesFile = File('${dir.path}/retos_diarios_${date.month}_${date.year}_$timestamp.csv');
       await challengesFile.writeAsString(challengesCsv);
       
       await Share.shareXFiles([XFile(tasksFile.path), XFile(challengesFile.path)], text: 'Estadísticas Integrales de Rutine - Mes ${date.month}/${date.year}');
