@@ -695,7 +695,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '${days[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]} de ${date.year}';
   }
 
-  Future<void> _handleChallengeResponse(bool success, String dateStr, int streak) async {
+  Future<void> _handleChallengeResponse(bool success, String dateStr, int streak, int challengeId) async {
     final noteController = TextEditingController();
     final result = await showDialog<String>(
       context: context,
@@ -743,8 +743,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await HiveService.setHasCompletedChallengeToday(dateStr, true);
       await HiveService.setChallengeSuccessToday(dateStr, success);
       await HiveService.setChallengeNoteToday(dateStr, result);
+      await HiveService.setChallengeIdToday(dateStr, challengeId);
       
       if (success) {
+        await HiveService.addCompletedChallengeId(challengeId);
         await HiveService.setChallengeStreak(streak + 1);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -765,8 +767,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildChallengeCard(BuildContext context) {
     final now = DateTime.now();
-    final dayOfYear = int.parse("${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}");
-    final challenge = ChallengeRepository.getDailyChallenge(dayOfYear);
+    final completedIds = HiveService.getCompletedChallengeIds();
+    final challenge = ChallengeRepository.getDailyChallenge(now, completedIds);
     final dateStr = "${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}";
     final hasCompleted = HiveService.getHasCompletedChallengeToday(dateStr);
     final streak = HiveService.getChallengeStreak();
@@ -806,7 +808,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     color: challenge.level == 1 ? AppTheme.neonCyan :
                            challenge.level == 2 ? Colors.green :
                            challenge.level == 3 ? Colors.orange :
-                           AppTheme.neonPink,
+                           Colors.red,
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
                   ),
@@ -825,7 +827,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _handleChallengeResponse(false, dateStr, streak),
+                    onPressed: () => _handleChallengeResponse(false, dateStr, streak, challenge.id),
                     icon: Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 18),
                     label: Text('No me atreví', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
                     style: OutlinedButton.styleFrom(
@@ -837,7 +839,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () => _handleChallengeResponse(true, dateStr, streak),
+                    onPressed: () => _handleChallengeResponse(true, dateStr, streak, challenge.id),
                     icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                     label: const Text('¡Lo cumplí!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                     style: ElevatedButton.styleFrom(

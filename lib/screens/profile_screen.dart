@@ -485,7 +485,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         final day = DateTime(date.year, date.month, i);
         if (day.isAfter(now)) break;
         
-        final dayOfYear = int.parse("${day.year}${day.month.toString().padLeft(2, '0')}${day.day.toString().padLeft(2, '0')}");
         final dateStr = "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
         
         if (HiveService.getHasCompletedChallengeToday(dateStr)) {
@@ -507,7 +506,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
            }
            
            final note = HiveService.getChallengeNoteToday(dateStr) ?? "";
-           final challenge = ChallengeRepository.getDailyChallenge(dayOfYear);
+           
+           final int? pastChallengeId = HiveService.getChallengeIdToday(dateStr);
+           Challenge challenge;
+           if (pastChallengeId != null) {
+             challenge = ChallengeRepository.allChallenges.firstWhere((c) => c.id == pastChallengeId, orElse: () => ChallengeRepository.allChallenges.first);
+           } else {
+             // Fallback para días pasados antes de implementar el guardado de IDs
+             final completedIds = HiveService.getCompletedChallengeIds();
+             challenge = ChallengeRepository.getDailyChallenge(day, completedIds);
+           }
            
            String resultStr = success == true ? 'Lo cumplí' : (success == false ? 'No me atreví' : 'Sin respuesta');
            String noteStr = _sanitizeExcel(note.replaceAll('"', '""'));

@@ -117,9 +117,39 @@ class ChallengeRepository {
     Challenge(id: 100, text: "Haz el ridículo a propósito frente a tus amigos (caerte falsamente, cantar mal) para reírte de ti mismo.", level: 4),
   ];
 
-  static Challenge getDailyChallenge(int dayOfYear) {
-    // Retorna un reto diferente basado en el día del año
-    final index = dayOfYear % allChallenges.length;
-    return allChallenges[index];
+  static Challenge getDailyChallenge(DateTime date, List<int> completedIds) {
+    // 1. Agrupar retos por nivel
+    final level1 = allChallenges.where((c) => c.level == 1).toList();
+    final level2 = allChallenges.where((c) => c.level == 2).toList();
+    final level3 = allChallenges.where((c) => c.level == 3).toList();
+    final level4 = allChallenges.where((c) => c.level == 4).toList();
+
+    // 2. Determinar el nivel actual comprobando si todos los retos del nivel están cumplidos
+    List<Challenge> currentLevelChallenges = level1;
+    if (level1.every((c) => completedIds.contains(c.id))) {
+      currentLevelChallenges = level2;
+      if (level2.every((c) => completedIds.contains(c.id))) {
+        currentLevelChallenges = level3;
+        if (level3.every((c) => completedIds.contains(c.id))) {
+          currentLevelChallenges = level4;
+        }
+      }
+    }
+
+    // 3. Filtrar los retos que aún NO se han cumplido de este nivel
+    final pendingChallenges = currentLevelChallenges.where((c) => !completedIds.contains(c.id)).toList();
+
+    // Si el usuario ya completó todos los 100 retos, mostramos uno al azar de todos usando los días desde epoch
+    if (pendingChallenges.isEmpty) {
+      final daysSinceEpoch = date.difference(DateTime(2024, 1, 1)).inDays;
+      return allChallenges[daysSinceEpoch % allChallenges.length];
+    }
+
+    // 4. Seleccionar un reto pseudoaleatorio de los pendientes usando la fecha de hoy como "semilla".
+    // Esto asegura que durante todo el día (así cierre y abra la app) le toque el mismo reto.
+    final seed = date.year * 10000 + date.month * 100 + date.day;
+    final index = seed % pendingChallenges.length;
+    
+    return pendingChallenges[index];
   }
 }

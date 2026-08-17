@@ -241,6 +241,27 @@ class HiveService {
     await _prefsBox.put('challengeNote_$dateStr', note);
   }
 
+  static int? getChallengeIdToday(String dateStr) {
+    return _prefsBox.get('challengeId_$dateStr');
+  }
+
+  static Future<void> setChallengeIdToday(String dateStr, int id) async {
+    await _prefsBox.put('challengeId_$dateStr', id);
+  }
+
+  static List<int> getCompletedChallengeIds() {
+    final list = _prefsBox.get('completedChallengeIds', defaultValue: <int>[]);
+    return (list as List).cast<int>();
+  }
+
+  static Future<void> addCompletedChallengeId(int id) async {
+    final list = getCompletedChallengeIds().toList(); // copy to avoid modifying unmodifiable list
+    if (!list.contains(id)) {
+      list.add(id);
+      await _prefsBox.put('completedChallengeIds', list);
+    }
+  }
+
   // ─── BACKUP Y SEGURIDAD ───────────────────────────────────────────────────
 
   static Future<File> exportSecureBackup() async {
