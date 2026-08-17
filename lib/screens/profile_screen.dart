@@ -7,6 +7,7 @@ import 'package:rutine/providers/theme_provider.dart';
 import 'package:rutine/services/hive_service.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:rutine/models/task_model.dart';
+import 'package:rutine/repositories/challenge_repository.dart';
 
 class ProfileScreen extends StatefulWidget {
   final TaskProvider provider;
@@ -435,26 +436,86 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _generateAndShareCSV(DateTime date) async {
     try {
-      final tasks = widget.provider.tasks;
-      String csv = "Tarea,Categoria,Completada,Minutos_Invertidos_Mes,Fecha_Creacion\n";
+      final tasks = widget.provider.tasks.toList();
+      tasks.sort((a, b) => a.date.compareTo(b.date)); // Ordenar tareas por fecha (más antiguas primero)
+      
+      // Añadimos el BOM (\uFEFF) para que Excel reconozca correctamente el UTF-8 (Tildes, ñ, Emojis)
+      String tasksCsv = "\uFEFFTarea,Descripcion,Categoria,Estado,Motivo_Cancelacion,Minutos_Mes,Notas_Tiempo,Fecha_Creacion\n";
 
       for (var t in tasks) {
         int minutes = 0;
+        List<String> notesList = [];
         final history = widget.provider.getFullHistory(t);
         for (var log in history) {
           if (log.date.month == date.month && log.date.year == date.year) {
             minutes += log.minutes;
+            if (log.note.isNotEmpty) notesList.add(log.note.replaceAll('"', '""'));
           }
         }
         
-        csv += '"${t.title}","${t.category.label}",${t.isCompleted},${minutes},"${t.date.toIso8601String()}"\n';
+        if ((t.date.month == date.month && t.date.year == date.year) || minutes > 0) {
+          String status = t.isCancelled ? 'Cancelada' : (t.isCompleted ? 'Completada' : 'Pendiente');
+          String desc = (t.description ?? '').replaceAll('"', '""');
+          String title = t.title.replaceAll('"', '""');
+          String cancelReason = (t.cancelReason ?? '').replaceAll('"', '""');
+          String allNotes = notesList.join(" | ");
+          
+          tasksCsv += '"$title","$desc","${t.category.label}","$status","$cancelReason",$minutes,"$allNotes","${t.date.toIso8601String()}"\n';
+        }
+      }
+
+      // Añadimos el BOM (\uFEFF) para que Excel reconozca correctamente el UTF-8
+      String challengesCsv = "\uFEFFFecha,Nivel,Reto,Resultado,Comentario\n";
+      int daysInMonth = DateTime(date.year, date.month + 1, 0).day;
+      final now = DateTime.now();
+      
+      int legacyCount = 0;
+
+      // Ordenar retos por fecha (más antiguas primero)
+      for (int i = 1; i <= daysInMonth; i++) {
+        final day = DateTime(date.year, date.month, i);
+        if (day.isAfter(now)) break;
+        
+        final dayOfYear = int.parse("${day.year}${day.month.toString().padLeft(2, '0')}${day.day.toString().padLeft(2, '0')}");
+        final dateStr = "${day.year}-${day.month.toString().padLeft(2, '0')}-${day.day.toString().padLeft(2, '0')}";
+        
+        if (HiveService.getHasCompletedChallengeToday(dateStr)) {
+           bool? success = HiveService.getChallengeSuccessToday(dateStr);
+           
+           // Corrección para los 3 primeros registros legacy sin 'success' definido
+           if (success == null) {
+             legacyCount++;
+             // Como el bucle va de más antiguo a más reciente:
+             // legacyCount == 1 y 2 son los más antiguos (los que cumplió)
+             // legacyCount == 3 es el más reciente (el que no realizó)
+             if (legacyCount <= 2) {
+               success = true;
+               HiveService.setChallengeSuccessToday(dateStr, true); // Guardar para el futuro
+             } else {
+               success = false;
+               HiveService.setChallengeSuccessToday(dateStr, false);
+             }
+           }
+           
+           final note = HiveService.getChallengeNoteToday(dateStr) ?? "";
+           final challenge = ChallengeRepository.getDailyChallenge(dayOfYear);
+           
+           String resultStr = success == true ? 'Lo cumplí' : (success == false ? 'No me atreví' : 'Sin respuesta');
+           String noteStr = note.replaceAll('"', '""');
+           String textStr = challenge.text.replaceAll('"', '""');
+           
+           challengesCsv += '"$dateStr",${challenge.level},"$textStr","$resultStr","$noteStr"\n';
+        }
       }
 
       final dir = await Directory.systemTemp.createTemp();
-      final file = File('${dir.path}/estadisticas_${date.month}_${date.year}.csv');
-      await file.writeAsString(csv);
+      final tasksFile = File('${dir.path}/tareas_y_eventos_${date.month}_${date.year}.csv');
+      await tasksFile.writeAsString(tasksCsv);
       
-      await Share.shareXFiles([XFile(file.path)], text: 'Estadísticas de Rutine - Mes ${date.month}/${date.year}');
+      final challengesFile = File('${dir.path}/retos_diarios_${date.month}_${date.year}.csv');
+      await challengesFile.writeAsString(challengesCsv);
+      
+      await Share.shareXFiles([XFile(tasksFile.path), XFile(challengesFile.path)], text: 'Estadísticas Integrales de Rutine - Mes ${date.month}/${date.year}');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al exportar: $e')),

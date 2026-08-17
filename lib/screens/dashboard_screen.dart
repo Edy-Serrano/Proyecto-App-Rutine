@@ -695,6 +695,74 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return '${days[date.weekday - 1]}, ${date.day} de ${months[date.month - 1]} de ${date.year}';
   }
 
+  Future<void> _handleChallengeResponse(bool success, String dateStr, int streak) async {
+    final noteController = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppTheme.bgCard,
+        title: Text(success ? '¡Felicidades!' : 'No te preocupes', style: const TextStyle(color: Colors.white)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              success ? 'Cuéntanos cómo lograste salir de tu zona de confort:' : '¿Qué te detuvo esta vez? ¡Escríbelo para aprender de ello!',
+              style: TextStyle(color: AppTheme.textSecondary, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: noteController,
+              style: const TextStyle(color: Colors.white),
+              maxLines: 3,
+              decoration: InputDecoration(
+                hintText: success ? 'Ej: Me dio nervios pero al final...' : 'Ej: Había mucha gente...',
+                hintStyle: TextStyle(color: AppTheme.textMuted),
+                filled: true,
+                fillColor: AppTheme.bgSurface,
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: Text('Cancelar', style: TextStyle(color: AppTheme.textMuted)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, noteController.text.trim()),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonPurple),
+            child: const Text('Guardar', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      await HiveService.setHasCompletedChallengeToday(dateStr, true);
+      await HiveService.setChallengeSuccessToday(dateStr, success);
+      await HiveService.setChallengeNoteToday(dateStr, result);
+      
+      if (success) {
+        await HiveService.setChallengeStreak(streak + 1);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('¡Increíble! Acabas de aumentar tu racha a ${streak + 1} 🔥')),
+          );
+        }
+      } else {
+        await HiveService.setChallengeStreak(0);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Nota guardada. ¡Mañana será otro día para intentarlo! 💪')),
+          );
+        }
+      }
+      if (mounted) setState(() {});
+    }
+  }
+
   Widget _buildChallengeCard(BuildContext context) {
     final now = DateTime.now();
     final dayOfYear = int.parse("${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}");
@@ -757,14 +825,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () async {
-                      await HiveService.setHasCompletedChallengeToday(dateStr, true);
-                      await HiveService.setChallengeStreak(0); // Reiniciar racha
-                      setState(() {});
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No pasa nada, ¡mañana será otro día para intentarlo! 💪')),
-                      );
-                    },
+                    onPressed: () => _handleChallengeResponse(false, dateStr, streak),
                     icon: Icon(Icons.close_rounded, color: AppTheme.textMuted, size: 18),
                     label: Text('No me atreví', style: TextStyle(color: AppTheme.textMuted, fontSize: 13)),
                     style: OutlinedButton.styleFrom(
@@ -776,14 +837,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await HiveService.setHasCompletedChallengeToday(dateStr, true);
-                      await HiveService.setChallengeStreak(streak + 1);
-                      setState(() {});
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('¡Increíble! Acabas de aumentar tu racha de retos a ${streak + 1} 🔥')),
-                      );
-                    },
+                    onPressed: () => _handleChallengeResponse(true, dateStr, streak),
                     icon: const Icon(Icons.check_circle_outline, color: Colors.white, size: 18),
                     label: const Text('¡Lo cumplí!', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
                     style: ElevatedButton.styleFrom(
@@ -795,12 +849,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
             )
           else
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.local_fire_department_rounded, color: AppTheme.neonPurple, size: 20),
-                const SizedBox(width: 8),
-                Text('¡Reto marcado hoy! Racha actual: $streak', style: const TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold)),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      HiveService.getChallengeSuccessToday(dateStr) == true ? Icons.local_fire_department_rounded : Icons.history_rounded, 
+                      color: AppTheme.neonPurple, 
+                      size: 20
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      HiveService.getChallengeSuccessToday(dateStr) == true 
+                          ? '¡Reto marcado hoy! Racha actual: $streak'
+                          : 'Reto intentado hoy. ¡Ánimo!', 
+                      style: const TextStyle(color: AppTheme.neonPurple, fontWeight: FontWeight.bold)
+                    ),
+                  ],
+                ),
+                if (HiveService.getChallengeNoteToday(dateStr)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.bgSurface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.neonPurple.withOpacity(0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Tu nota:', style: TextStyle(color: AppTheme.neonCyan, fontSize: 12, fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 4),
+                        Text(HiveService.getChallengeNoteToday(dateStr)!, style: TextStyle(color: AppTheme.textSecondary, fontSize: 13, fontStyle: FontStyle.italic)),
+                      ],
+                    ),
+                  ),
+                ],
               ],
             ),
         ],

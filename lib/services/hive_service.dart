@@ -225,6 +225,22 @@ class HiveService {
     await _prefsBox.put('challengeCompleted_$dateStr', completed);
   }
 
+  static bool? getChallengeSuccessToday(String dateStr) {
+    return _prefsBox.get('challengeSuccess_$dateStr');
+  }
+
+  static Future<void> setChallengeSuccessToday(String dateStr, bool success) async {
+    await _prefsBox.put('challengeSuccess_$dateStr', success);
+  }
+
+  static String? getChallengeNoteToday(String dateStr) {
+    return _prefsBox.get('challengeNote_$dateStr');
+  }
+
+  static Future<void> setChallengeNoteToday(String dateStr, String note) async {
+    await _prefsBox.put('challengeNote_$dateStr', note);
+  }
+
   // ─── BACKUP Y SEGURIDAD ───────────────────────────────────────────────────
 
   static Future<File> exportSecureBackup() async {
