@@ -389,7 +389,9 @@ class TaskProvider extends ChangeNotifier {
     if (index != -1) {
       final task = _tasks[index];
       if (minutes > 0 || note.isNotEmpty) {
-        task.history.add(TimeLog(date: DateTime.now(), minutes: minutes, note: note));
+        final now = DateTime.now();
+        final logDate = DateTime(task.date.year, task.date.month, task.date.day, now.hour, now.minute, now.second);
+        task.history.add(TimeLog(date: logDate, minutes: minutes, note: note));
       }
       task.isCompleted = true;
       await HiveService.updateTask(task);
@@ -410,7 +412,9 @@ class TaskProvider extends ChangeNotifier {
 
     // Registrar el tiempo de hoy en la tarea original
     if (minutes > 0 || note.isNotEmpty) {
-      origTask.history.add(TimeLog(date: DateTime.now(), minutes: minutes, note: note));
+      final now = DateTime.now();
+      final logDate = DateTime(origTask.date.year, origTask.date.month, origTask.date.day, now.hour, now.minute, now.second);
+      origTask.history.add(TimeLog(date: logDate, minutes: minutes, note: note));
     }
     origTask.isCompleted = true;
     origTask.isPostponed = true;
