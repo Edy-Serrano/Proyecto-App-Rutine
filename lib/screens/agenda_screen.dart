@@ -18,6 +18,7 @@ class AgendaScreen extends StatefulWidget {
 class _AgendaScreenState extends State<AgendaScreen> {
   DateTime _focusedMonth = DateTime.now();
   DateTime _selectedDay = DateTime.now();
+  bool _showTimeline = false;
 
   @override
   void initState() {
@@ -47,6 +48,20 @@ class _AgendaScreenState extends State<AgendaScreen> {
         backgroundColor: AppTheme.bgDark,
         actions: [
           IconButton(
+            icon: Icon(
+              _showTimeline ? Icons.calendar_month_rounded : Icons.calendar_view_week_rounded,
+              color: AppTheme.neonPurple,
+            ),
+            onPressed: () {
+              setState(() {
+                _showTimeline = !_showTimeline;
+                if (_showTimeline) {
+                   _selectedDay = DateTime.now();
+                }
+              });
+            },
+          ),
+          IconButton(
             icon: const Icon(Icons.today_rounded, color: AppTheme.neonCyan),
             onPressed: () => setState(() {
               _focusedMonth = DateTime.now();
@@ -55,7 +70,7 @@ class _AgendaScreenState extends State<AgendaScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: _showTimeline ? _buildTimelineWeekly() : Column(
         children: [
           // === HEADER CALENDARIO ===
           _buildCalendarHeader(),
@@ -602,4 +617,172 @@ class _AgendaScreenState extends State<AgendaScreen> {
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  Widget _buildTimelineWeekly() {
+    final int weekday = _selectedDay.weekday; // 1 = Lunes, 7 = Domingo
+    final DateTime startOfWeek = _selectedDay.subtract(Duration(days: weekday - 1));
+    final List<DateTime> weekDays = List.generate(7, (i) => startOfWeek.add(Duration(days: i)));
+    
+    final int startHour = 5;
+    final int endHour = 23;
+    final double hourHeight = 60.0;
+    final int totalHours = endHour - startHour + 1;
+    
+    return Column(
+      children: [
+        // Cabecera con días
+        Container(
+           color: AppTheme.bgCard,
+           padding: const EdgeInsets.only(left: 48, right: 8, top: 12, bottom: 12),
+           child: Row(
+             children: weekDays.map((d) {
+               bool isToday = _isSameDay(d, DateTime.now());
+               return Expanded(
+                 child: Column(
+                   children: [
+                     Text(
+                       ['Lun','Mar','Mie','Jue','Vie','Sab','Dom'][d.weekday - 1], 
+                       style: TextStyle(color: isToday ? AppTheme.neonPurple : AppTheme.textSecondary, fontSize: 12, fontWeight: isToday ? FontWeight.bold : FontWeight.normal)
+                     ),
+                     const SizedBox(height: 6),
+                     Container(
+                       padding: const EdgeInsets.all(8),
+                       decoration: BoxDecoration(
+                         shape: BoxShape.circle,
+                         color: isToday ? AppTheme.neonPurple : Colors.transparent,
+                       ),
+                       child: Text('${d.day}', style: TextStyle(color: isToday ? Colors.white : AppTheme.textPrimary, fontWeight: isToday ? FontWeight.bold : FontWeight.normal, fontSize: 13)),
+                     ),
+                   ],
+                 ),
+               );
+             }).toList(),
+           ),
+        ),
+        // Cuerpo de la línea de tiempo
+        Expanded(
+          child: SingleChildScrollView(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Columna de horas
+                SizedBox(
+                  width: 48,
+                  child: Column(
+                    children: List.generate(totalHours, (index) {
+                      int hour = startHour + index;
+                      return Container(
+                        height: hourHeight,
+                        alignment: Alignment.topCenter,
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text('${hour.toString().padLeft(2, '0')}:00', style: TextStyle(color: AppTheme.textMuted, fontSize: 11)),
+                      );
+                    }),
+                  ),
+                ),
+                // Grid de días y tareas
+                Expanded(
+                  child: Stack(
+                    children: [
+                      // Grid de fondo (filas)
+                      Column(
+                        children: List.generate(totalHours, (index) {
+                          return Container(
+                            height: hourHeight,
+                            decoration: BoxDecoration(
+                              border: Border(top: BorderSide(color: AppTheme.bgSurface, width: 1)),
+                            ),
+                          );
+                        }),
+                      ),
+                      // Grid de fondo (columnas)
+                      Row(
+                         children: List.generate(7, (index) => Expanded(
+                           child: Container(
+                             decoration: BoxDecoration(border: Border(left: BorderSide(color: AppTheme.bgSurface, width: 1))), 
+                             height: totalHours * hourHeight,
+                           )
+                         )),
+                      ),
+                      // Tareas superpuestas
+                      ..._buildTimelineTasks(weekDays, startHour, hourHeight),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  List<Widget> _buildTimelineTasks(List<DateTime> weekDays, int startHour, double hourHeight) {
+    List<Widget> taskWidgets = [];
+    
+    // Usamos LayoutBuilder indirecamente asumiendo ancho disponible: screen width - (48 de horas + 8 de padding derecho)
+    // Para simplificar, calcularemos en base al screen size dentro de la función build
+    // pero como no tenemos acceso directo aquí, usamos MediaQuery
+    
+    for (int dayIdx = 0; dayIdx < 7; dayIdx++) {
+      DateTime day = weekDays[dayIdx];
+      List<Task> dailyTasks = widget.provider.tasksForDate(day).where((t) => !t.isCancelled && t.time != null).toList();
+      
+      for (var task in dailyTasks) {
+        if (task.time!.hour < startHour || task.time!.hour > 23) continue;
+        
+        double topOffset = ((task.time!.hour - startHour) + (task.time!.minute / 60.0)) * hourHeight;
+        
+        double durationHours = 1.0; // 1 hora por defecto como solicitó el usuario
+        if (task.endTime != null) {
+           double startVal = task.time!.hour + (task.time!.minute / 60.0);
+           double endVal = task.endTime!.hour + (task.endTime!.minute / 60.0);
+           if (endVal > startVal) {
+             durationHours = endVal - startVal;
+           }
+        }
+        
+        double height = durationHours * hourHeight;
+        
+        taskWidgets.add(
+          Builder(
+            builder: (context) {
+              final colWidth = (MediaQuery.of(context).size.width - 56) / 7;
+              return Positioned(
+                top: topOffset,
+                left: dayIdx * colWidth,
+                width: colWidth,
+                height: height,
+                child: GestureDetector(
+                  onTap: () => _showTaskDetails(context, task),
+                  child: Container(
+                    margin: const EdgeInsets.only(left: 2, right: 2, top: 1, bottom: 1),
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: task.category.color.withOpacity(0.85),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: task.category.color, width: 1),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          task.title, 
+                          style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold), 
+                          maxLines: 2, 
+                          overflow: TextOverflow.ellipsis
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+          )
+        );
+      }
+    }
+    return taskWidgets;
+  }
 }

@@ -48,6 +48,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final provider = widget.provider;
     final todayTasks = provider.tasksForDate(_selectedDate);
     final completionRate = provider.completionRateForDate(_selectedDate);
+    final pendingAlerts = provider.pendingAlerts;
 
     return Scaffold(
       backgroundColor: AppTheme.bgDark,
@@ -102,6 +103,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 fontStyle: FontStyle.italic,
               ),
             ),
+            actions: [
+              _buildNotificationBell(context, pendingAlerts),
+            ],
           ),
 
           SliverToBoxAdapter(
@@ -161,6 +165,77 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNotificationBell(BuildContext context, List<Task> alerts) {
+    return GestureDetector(
+      onTap: () => _showPendingAlerts(context, alerts),
+      child: Container(
+        margin: const EdgeInsets.only(right: 16),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            const Icon(Icons.notifications_rounded, color: AppTheme.neonPurple, size: 28),
+            if (alerts.isNotEmpty)
+              Positioned(
+                right: 0,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: const BoxDecoration(
+                    color: Colors.redAccent,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Text(
+                    '${alerts.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPendingAlerts(BuildContext context, List<Task> alerts) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppTheme.bgCard,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Notificaciones Pendientes', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              if (alerts.isEmpty) ...[
+                Text('No tienes tareas próximas a vencer.', textAlign: TextAlign.center, style: TextStyle(color: AppTheme.textSecondary)),
+                const SizedBox(height: 16),
+              ] else ...[
+                ...alerts.map((t) {
+                  return ListTile(
+                    leading: Icon(t.category.icon, color: t.category.color),
+                    title: Text(t.title, style: const TextStyle(color: Colors.white)),
+                    subtitle: Text('Vence el ${_formattedDate(t.dueDate!)}', style: TextStyle(color: AppTheme.textMuted)),
+                  );
+                }),
+              ],
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cerrar', style: TextStyle(color: AppTheme.neonPurple)),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

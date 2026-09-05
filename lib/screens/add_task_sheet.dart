@@ -27,6 +27,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   DateTime? _recurringEndDate;
   final Set<int> _recurringDays = {}; // 1=Lun ... 7=Dom
   final _notifController = TextEditingController();
+  DateTime? _dueDate;
+  final _notifyDaysController = TextEditingController();
 
   // Nutrición
   int _waterGlasses = 0;
@@ -53,6 +55,10 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       if (t.notificationMinutes != null) {
         _notifController.text = t.notificationMinutes.toString();
       }
+      _dueDate = t.dueDate;
+      if (t.notifyDaysBeforeDueDate != null) {
+        _notifyDaysController.text = t.notifyDaysBeforeDueDate.toString();
+      }
       if (t.foodMetadata != null) {
         _waterGlasses = t.foodMetadata!['water'] as int? ?? 0;
         _proteinGrams = t.foodMetadata!['protein'] as int? ?? 0;
@@ -68,6 +74,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     _titleController.dispose();
     _descController.dispose();
     _notifController.dispose();
+    _notifyDaysController.dispose();
     super.dispose();
   }
 
@@ -106,6 +113,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       return;
     }
     int? notifMins = int.tryParse(_notifController.text.trim());
+    int? notifyDays = int.tryParse(_notifyDaysController.text.trim());
 
     if (_selectedTime != null) {
       final providerTasks = widget.provider.tasksForDate(_selectedDate).where((t) => t.id != widget.taskToEdit?.id).toList();
@@ -175,6 +183,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         isRecurring: _isRecurring,
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
         notificationMinutes: notifMins,
+        dueDate: _dueDate,
+        notifyDaysBeforeDueDate: notifyDays,
         foodMetadata: _selectedCategory == TaskCategory.food ? {
           'water': _waterGlasses,
           'protein': _proteinGrams,
@@ -226,6 +236,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         recurringDays: _isRecurring ? _recurringDays.toList() : [],
         recurringEndDate: _isRecurring ? _recurringEndDate : null,
         notificationMinutes: notifMins,
+        dueDate: _dueDate,
+        notifyDaysBeforeDueDate: notifyDays,
         foodMetadata: _selectedCategory == TaskCategory.food ? {
           'water': _waterGlasses,
           'protein': _proteinGrams,
@@ -296,6 +308,27 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
       ),
     );
     if (picked != null) setState(() => _selectedTime = picked);
+  }
+
+  Future<void> _pickDueDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _dueDate ?? _selectedDate,
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
+      lastDate: DateTime.now().add(const Duration(days: 365 * 2)),
+      builder: (context, child) => Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: Colors.redAccent,
+            onPrimary: Colors.white,
+            surface: AppTheme.bgCard,
+            onSurface: AppTheme.textPrimary,
+          ),
+        ),
+        child: child!,
+      ),
+    );
+    if (picked != null) setState(() => _dueDate = picked);
   }
 
   Future<void> _pickEndTime() async {
@@ -447,6 +480,39 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
               icon: Icons.notifications_active_rounded,
               keyboardType: TextInputType.number,
             ),
+            const SizedBox(height: 28),
+
+            // === FECHA LIMITE ===
+            Text('Vencimiento (Opcional)',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: AppTheme.textSecondary)),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(child: _buildChip(
+                  icon: Icons.event_busy_rounded,
+                  label: _dueDate == null ? 'Sin fecha límite' : _formatDate(_dueDate!),
+                  color: Colors.redAccent,
+                  onTap: _pickDueDate,
+                )),
+                if (_dueDate != null)
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, color: Colors.redAccent),
+                    onPressed: () => setState(() => _dueDate = null),
+                  ),
+              ],
+            ),
+            if (_dueDate != null) ...[
+              const SizedBox(height: 14),
+              _buildTextField(
+                controller: _notifyDaysController,
+                label: 'Avisar cuántos días antes',
+                icon: Icons.notification_important_rounded,
+                keyboardType: TextInputType.number,
+              ),
+            ],
             const SizedBox(height: 28),
 
             // === SECCIÓN FOOD ===

@@ -152,8 +152,23 @@ class _StatsScreenState extends State<StatsScreen> {
               Text('Aún no tienes metas para este mes.', style: TextStyle(color: AppTheme.textMuted))
             else
               ...monthGoals.map((goal) {
-                final investedMinutes = timeInvestedMonthly[goal.category] ?? 0;
+                int investedMinutes = 0;
+                if (goal.taskName != null && goal.taskName!.isNotEmpty) {
+                  final tList = widget.provider.tasks.where((t) => t.title.toLowerCase() == goal.taskName!.toLowerCase());
+                  for (var t in tList) {
+                    final hist = widget.provider.getFullHistory(t);
+                    for (var log in hist) {
+                      if (log.date.month == _selectedDate.month && log.date.year == _selectedDate.year) {
+                        investedMinutes += log.minutes;
+                      }
+                    }
+                  }
+                } else {
+                  investedMinutes = timeInvestedMonthly[goal.category] ?? 0;
+                }
+                
                 final percentage = goal.targetMinutes > 0 ? (investedMinutes / goal.targetMinutes) : 0.0;
+                final displayLabel = (goal.taskName != null && goal.taskName!.isNotEmpty) ? goal.taskName! : goal.category.label;
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 16),
                   child: Column(
@@ -166,7 +181,7 @@ class _StatsScreenState extends State<StatsScreen> {
                             children: [
                               Icon(goal.category.icon, color: goal.category.color, size: 20),
                               const SizedBox(width: 8),
-                              Text(goal.category.label, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              Text(displayLabel, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                             ]
                           ),
                           Text('${_formatMinutes(investedMinutes)} / ${_formatMinutes(goal.targetMinutes)}', style: TextStyle(color: AppTheme.textSecondary)),
@@ -673,6 +688,7 @@ class _StatsScreenState extends State<StatsScreen> {
   Future<void> _showAddGoalDialog() async {
     TaskCategory selectedCat = TaskCategoryExtension.uiOrder.first;
     int targetHours = 10;
+    final _taskNameController = TextEditingController();
     
     await showDialog(
       context: context,
@@ -681,10 +697,11 @@ class _StatsScreenState extends State<StatsScreen> {
           return AlertDialog(
             backgroundColor: AppTheme.bgCard,
             title: const Text('Nueva Meta Mensual', style: TextStyle(color: Colors.white)),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                 Text('Categoría', style: TextStyle(color: AppTheme.textSecondary)),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<TaskCategory>(
@@ -713,6 +730,20 @@ class _StatsScreenState extends State<StatsScreen> {
                   },
                 ),
                 const SizedBox(height: 16),
+                Text('Actividad Específica (Opcional)', style: TextStyle(color: AppTheme.textSecondary)),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _taskNameController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Ej. Cepillarse, Soc Analist',
+                    hintStyle: TextStyle(color: AppTheme.textMuted),
+                    filled: true,
+                    fillColor: AppTheme.bgSurface,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                  ),
+                ),
+                const SizedBox(height: 16),
                 Text('Objetivo en Horas', style: TextStyle(color: AppTheme.textSecondary)),
                 const SizedBox(height: 8),
                 Row(
@@ -731,7 +762,8 @@ class _StatsScreenState extends State<StatsScreen> {
                 ),
               ],
             ),
-            actions: [
+          ),
+          actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 child: Text('Cancelar', style: TextStyle(color: AppTheme.textMuted)),
@@ -741,6 +773,7 @@ class _StatsScreenState extends State<StatsScreen> {
                   final goal = MonthlyGoal(
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                     category: selectedCat,
+                    taskName: _taskNameController.text.trim().isEmpty ? null : _taskNameController.text.trim(),
                     targetMinutes: targetHours * 60,
                     month: _selectedDate.month,
                     year: _selectedDate.year,

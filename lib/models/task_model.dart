@@ -128,6 +128,8 @@ class Task {
   DateTime? recurringEndDate;
   String? recurringGroupId;
   int? notificationMinutes;
+  DateTime? dueDate;
+  int? notifyDaysBeforeDueDate;
   List<TimeLog> history;
   Map<String, dynamic>? foodMetadata;
 
@@ -150,6 +152,8 @@ class Task {
     this.recurringEndDate,
     this.recurringGroupId,
     this.notificationMinutes,
+    this.dueDate,
+    this.notifyDaysBeforeDueDate,
     List<TimeLog>? history,
     this.foodMetadata,
   }) : history = history ?? [];
@@ -173,6 +177,8 @@ class Task {
     DateTime? recurringEndDate,
     String? recurringGroupId,
     int? notificationMinutes,
+    DateTime? dueDate,
+    int? notifyDaysBeforeDueDate,
     List<TimeLog>? history,
     Map<String, dynamic>? foodMetadata,
   }) {
@@ -195,6 +201,8 @@ class Task {
       recurringEndDate: recurringEndDate ?? this.recurringEndDate,
       recurringGroupId: recurringGroupId ?? this.recurringGroupId,
       notificationMinutes: notificationMinutes ?? this.notificationMinutes,
+      dueDate: dueDate ?? this.dueDate,
+      notifyDaysBeforeDueDate: notifyDaysBeforeDueDate ?? this.notifyDaysBeforeDueDate,
       history: history ?? this.history.map((e) => TimeLog(date: e.date, minutes: e.minutes, note: e.note)).toList(),
       foodMetadata: foodMetadata ?? (this.foodMetadata != null ? Map<String, dynamic>.from(this.foodMetadata!) : null),
     );
@@ -222,6 +230,8 @@ class Task {
       'recurringEndDate': recurringEndDate?.toIso8601String(),
       'recurringGroupId': recurringGroupId,
       'notificationMinutes': notificationMinutes,
+      'dueDate': dueDate?.toIso8601String(),
+      'notifyDaysBeforeDueDate': notifyDaysBeforeDueDate,
       'history': history.map((e) => e.toMap()).toList(),
       'foodMetadata': foodMetadata,
     };
@@ -255,6 +265,8 @@ class Task {
       recurringEndDate: map['recurringEndDate'] != null ? DateTime.parse(map['recurringEndDate'] as String) : null,
       recurringGroupId: map['recurringGroupId'] as String?,
       notificationMinutes: map['notificationMinutes'] as int?,
+      dueDate: map['dueDate'] != null ? DateTime.parse(map['dueDate'] as String) : null,
+      notifyDaysBeforeDueDate: map['notifyDaysBeforeDueDate'] as int?,
       history: (map['history'] as List<dynamic>?)?.map((e) => TimeLog.fromMap(e as Map<dynamic, dynamic>)).toList() ?? [],
       foodMetadata: map['foodMetadata'] != null ? Map<String, dynamic>.from(map['foodMetadata'] as Map) : null,
     );

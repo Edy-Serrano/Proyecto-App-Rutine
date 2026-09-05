@@ -282,6 +282,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               },
             ),
             _buildSettingsTile(
+              icon: Icons.restore_rounded,
+              iconColor: AppTheme.neonPurple,
+              title: 'Restaurar Auto-Backup',
+              subtitle: 'Recuperar datos de Documentos',
+              onTap: () async {
+                if (await HiveService.hasAutoBackup()) {
+                  await HiveService.restoreAutoBackup();
+                  await widget.provider.loadTasks();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Auto-Backup restaurado con éxito')),
+                    );
+                  }
+                } else {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No se encontró un Auto-Backup en la carpeta Documentos')),
+                    );
+                  }
+                }
+              },
+            ),
+            _buildSettingsTile(
               icon: Icons.insert_chart_outlined_rounded,
               iconColor: Colors.green,
               title: 'Exportar Estadísticas',
@@ -525,6 +548,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
         }
       }
 
+      String goalsCsv = "\uFEFFCategoria,Actividad_Especifica,Minutos_Objetivo,Mes,Anio\n";
+      final allGoals = HiveService.getGoals();
+      for (var goal in allGoals) {
+        if (goal.month == date.month && goal.year == date.year) {
+           String catName = goal.category.label;
+           String taskN = _sanitizeExcel((goal.taskName ?? '').replaceAll('"', '""'));
+           goalsCsv += '"$catName","$taskN",${goal.targetMinutes},${goal.month},${goal.year}\n';
+        }
+      }
+
       final dir = await Directory.systemTemp.createTemp();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       
@@ -534,7 +567,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final challengesFile = File('${dir.path}/retos_diarios_${date.month}_${date.year}_$timestamp.csv');
       await challengesFile.writeAsString(challengesCsv);
       
-      await Share.shareXFiles([XFile(tasksFile.path), XFile(challengesFile.path)], text: 'Estadísticas Integrales de Rutine - Mes ${date.month}/${date.year}');
+      final goalsFile = File('${dir.path}/metas_mensuales_${date.month}_${date.year}_$timestamp.csv');
+      await goalsFile.writeAsString(goalsCsv);
+      
+      await Share.shareXFiles([XFile(tasksFile.path), XFile(challengesFile.path), XFile(goalsFile.path)], text: 'Estadísticas Integrales de Rutine - Mes ${date.month}/${date.year}');
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Error al exportar: $e')),

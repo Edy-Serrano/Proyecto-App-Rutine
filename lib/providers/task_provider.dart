@@ -10,19 +10,46 @@ class TaskProvider extends ChangeNotifier {
   String? _userImagePath;
 
   TaskProvider() {
-    _loadTasks();
+    loadTasks();
   }
 
-  Future<void> _loadTasks() async {
+  Future<void> loadTasks() async {
     _tasks = await HiveService.getTasks();
     
     // Limpieza: Eliminar TimeLogs en tareas no completadas con recurringGroupId
     // para prevenir datos fantasma (se ejecuta solo en background)
     _cleanupGhostLogs();
+    
+    await _checkOverdueTasks();
 
     _userName = HiveService.getUserName();
     _userImagePath = HiveService.getUserImagePath();
     notifyListeners();
+  }
+
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+    HiveService.createAutoBackup();
+  }
+
+  Future<void> _checkOverdueTasks() async {
+    bool changed = false;
+    final now = DateTime.now();
+    for (var task in _tasks) {
+      if (task.dueDate != null && !task.isCompleted && !task.isCancelled) {
+        final dueEndOfDay = DateTime(task.dueDate!.year, task.dueDate!.month, task.dueDate!.day, 23, 59, 59);
+        if (now.isAfter(dueEndOfDay)) {
+          task.isCancelled = true;
+          task.cancelReason = 'Vencida';
+          await HiveService.updateTask(task);
+          await NotificationService.cancelNotification(task.id.hashCode);
+          await NotificationService.cancelNotification('${task.id}_due'.hashCode);
+          changed = true;
+        }
+      }
+    }
+    if (changed) notifyListeners();
   }
 
   /// Limpia logs huerófanos en background sin bloquear la UI
@@ -48,6 +75,21 @@ class TaskProvider extends ChangeNotifier {
   List<Task> get tasks => List.unmodifiable(_tasks);
   String get userName => _userName;
   String? get userImagePath => _userImagePath;
+
+  /// Retorna las alertas pendientes (tareas con vencimiento próximo)
+  List<Task> get pendingAlerts {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    return _tasks.where((t) {
+      if (t.isCompleted || t.isCancelled || t.dueDate == null || t.notifyDaysBeforeDueDate == null) return false;
+      final targetAlertDate = t.dueDate!.subtract(Duration(days: t.notifyDaysBeforeDueDate!));
+      final alertDay = DateTime(targetAlertDate.year, targetAlertDate.month, targetAlertDate.day);
+      // Es una alerta si hoy es >= el día de alerta, y <= a la fecha límite
+      final dueDay = DateTime(t.dueDate!.year, t.dueDate!.month, t.dueDate!.day);
+      return (today.isAfter(alertDay) || today.isAtSameMomentAs(alertDay)) && 
+             (today.isBefore(dueDay) || today.isAtSameMomentAs(dueDay));
+    }).toList()..sort((a, b) => a.dueDate!.compareTo(b.dueDate!));
+  }
 
   // ─── CONSULTAS ──────────────────────────────────────────────────────────────
 
@@ -396,6 +438,7 @@ class TaskProvider extends ChangeNotifier {
       task.isCompleted = true;
       await HiveService.updateTask(task);
       await NotificationService.cancelNotification(task.id.hashCode);
+      await NotificationService.cancelNotification('${task.id}_due'.hashCode);
       notifyListeners();
     }
   }
@@ -420,6 +463,7 @@ class TaskProvider extends ChangeNotifier {
     origTask.isPostponed = true;
     await HiveService.updateTask(origTask);
     await NotificationService.cancelNotification(origTask.id.hashCode);
+    await NotificationService.cancelNotification('${origTask.id}_due'.hashCode);
 
     // ── Paso 2: Crear la tarea continuación en la nueva fecha ─────────────────
     // NO copiar el historial para evitar doble conteo. Se calculará dinámicamente con getFullHistory.
@@ -465,6 +509,7 @@ class TaskProvider extends ChangeNotifier {
       await HiveService.updateTask(task);
       if (task.isCompleted) {
         await NotificationService.cancelNotification(task.id.hashCode);
+        await NotificationService.cancelNotification('${task.id}_due'.hashCode);
       } else {
         _scheduleNotificationIfNeeded(task);
       }
@@ -490,6 +535,7 @@ class TaskProvider extends ChangeNotifier {
     _tasks.removeWhere((t) => t.id == taskId);
     await HiveService.deleteTask(taskId);
     await NotificationService.cancelNotification(taskId.hashCode);
+    await NotificationService.cancelNotification('${taskId}_due'.hashCode);
     notifyListeners();
   }
 
@@ -532,6 +578,7 @@ class TaskProvider extends ChangeNotifier {
       _tasks.removeWhere((task) => task.id == t.id);
       await HiveService.deleteTask(t.id);
       await NotificationService.cancelNotification(t.id.hashCode);
+      await NotificationService.cancelNotification('${t.id}_due'.hashCode);
     }
     notifyListeners();
   }
@@ -542,6 +589,7 @@ class TaskProvider extends ChangeNotifier {
       _tasks[index] = updated;
       await HiveService.updateTask(updated);
       await NotificationService.cancelNotification(updated.id.hashCode);
+      await NotificationService.cancelNotification('${updated.id}_due'.hashCode);
       if (!updated.isCompleted) {
         _scheduleNotificationIfNeeded(updated);
       }
@@ -561,6 +609,7 @@ class TaskProvider extends ChangeNotifier {
       _tasks[index] = cancelledTask;
       await HiveService.updateTask(cancelledTask);
       await NotificationService.cancelNotification(cancelledTask.id.hashCode);
+      await NotificationService.cancelNotification('${cancelledTask.id}_due'.hashCode);
       notifyListeners();
     }
   }
@@ -593,6 +642,7 @@ class TaskProvider extends ChangeNotifier {
           _tasks[i] = newTask;
           await HiveService.updateTask(newTask);
           await NotificationService.cancelNotification(newTask.id.hashCode);
+          await NotificationService.cancelNotification('${newTask.id}_due'.hashCode);
           if (!newTask.isCompleted) {
             _scheduleNotificationIfNeeded(newTask);
           }
@@ -604,31 +654,54 @@ class TaskProvider extends ChangeNotifier {
   }
 
   Future<void> _scheduleNotificationIfNeeded(Task task) async {
-    if (task.time == null || task.isCompleted) return;
+    if (task.isCompleted) return;
     
-    DateTime scheduled = DateTime(
-      task.date.year,
-      task.date.month,
-      task.date.day,
-      task.time!.hour,
-      task.time!.minute,
-    );
+    // 1. Programar alerta de hora de la actividad
+    if (task.time != null) {
+      DateTime scheduled = DateTime(
+        task.date.year,
+        task.date.month,
+        task.date.day,
+        task.time!.hour,
+        task.time!.minute,
+      );
 
-    if (task.notificationMinutes != null) {
-      scheduled = scheduled.subtract(Duration(minutes: task.notificationMinutes!));
+      if (task.notificationMinutes != null) {
+        scheduled = scheduled.subtract(Duration(minutes: task.notificationMinutes!));
+      }
+
+      if (scheduled.isAfter(DateTime.now())) {
+        final title = task.notificationMinutes != null
+            ? 'En ${task.notificationMinutes} min: ¡Tu actividad!'
+            : '¡Hora de tu actividad!';
+        await NotificationService.scheduleTaskNotification(
+          id: task.id.hashCode,
+          title: title,
+          body: task.title,
+          scheduledDate: scheduled,
+          color: task.category.color,
+        );
+      }
     }
 
-    if (scheduled.isAfter(DateTime.now())) {
-      final title = task.notificationMinutes != null
-          ? 'En ${task.notificationMinutes} min: ¡Tu actividad!'
-          : '¡Hora de tu actividad!';
-      await NotificationService.scheduleTaskNotification(
-        id: task.id.hashCode,
-        title: title,
-        body: task.title,
-        scheduledDate: scheduled,
-        color: task.category.color,
-      );
+    // 2. Programar alerta de vencimiento
+    if (task.dueDate != null && task.notifyDaysBeforeDueDate != null) {
+      final dueDateLimit = task.dueDate!;
+      final notifyDays = task.notifyDaysBeforeDueDate!;
+      final targetDate = dueDateLimit.subtract(Duration(days: notifyDays));
+      
+      // Programada a las 7:00 AM del día objetivo
+      final scheduledDue = DateTime(targetDate.year, targetDate.month, targetDate.day, 7, 0);
+
+      if (scheduledDue.isAfter(DateTime.now())) {
+        await NotificationService.scheduleTaskNotification(
+          id: '${task.id}_due'.hashCode,
+          title: '¡Atención! Vencimiento próximo',
+          body: 'Tu tarea "${task.title}" vence en $notifyDays días.',
+          scheduledDate: scheduledDue,
+          color: Colors.redAccent,
+        );
+      }
     }
   }
 

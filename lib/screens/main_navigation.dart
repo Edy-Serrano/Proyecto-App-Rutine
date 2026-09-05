@@ -7,6 +7,8 @@ import 'package:rutine/screens/stats_screen.dart';
 import 'package:rutine/screens/profile_screen.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
 import 'package:rutine/providers/theme_provider.dart';
+import 'package:rutine/services/hive_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MainNavigation extends StatefulWidget {
   final ThemeProvider themeProvider;
@@ -34,6 +36,51 @@ class _MainNavigationState extends State<MainNavigation> {
       StatsScreen(provider: _provider),
       ProfileScreen(provider: _provider, themeProvider: widget.themeProvider),
     ];
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAutoRestore();
+    });
+  }
+
+  Future<void> _checkAutoRestore() async {
+    // Solicitar permiso de almacenamiento al iniciar
+    if (await Permission.manageExternalStorage.status.isDenied) {
+      await Permission.manageExternalStorage.request();
+    }
+
+    if (_provider.tasks.isEmpty && await HiveService.hasAutoBackup()) {
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          backgroundColor: AppTheme.bgCard,
+          title: const Text('¡Respaldo Encontrado!', style: TextStyle(color: Colors.white)),
+          content: const Text(
+            'Se ha encontrado una copia de seguridad automática reciente. ¿Deseas restaurar tus datos?',
+            style: TextStyle(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Ignorar', style: TextStyle(color: AppTheme.textMuted)),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await HiveService.restoreAutoBackup();
+                await _provider.loadTasks();
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: const Text('Datos restaurados correctamente', style: TextStyle(color: Colors.white)), backgroundColor: AppTheme.neonCyan),
+                );
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.neonPurple),
+              child: const Text('Restaurar', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:rutine/models/task_model.dart';
 import 'package:rutine/models/goal_model.dart';
 import 'package:encrypt/encrypt.dart' as enc;
@@ -266,7 +267,13 @@ class HiveService {
 
   static Future<File> exportSecureBackup() async {
     final tasks = getTasks().map((t) => t.toMap()).toList();
-    final jsonStr = jsonEncode(tasks);
+    final goals = getGoals().map((g) => g.toMap()).toList();
+    
+    final fullData = {
+      'tasks': tasks,
+      'goals': goals,
+    };
+    final jsonStr = jsonEncode(fullData);
     
     final key = enc.Key(_encryptionKey);
     final iv = enc.IV.fromSecureRandom(16);
@@ -284,6 +291,58 @@ class HiveService {
     return file;
   }
 
+  static Future<void> createAutoBackup() async {
+    try {
+      if (Platform.isAndroid) {
+        var status = await Permission.manageExternalStorage.status;
+        if (!status.isGranted) return;
+      }
+      
+      final tasks = getTasks().map((t) => t.toMap()).toList();
+      final goals = getGoals().map((g) => g.toMap()).toList();
+      
+      final fullData = {
+        'tasks': tasks,
+        'goals': goals,
+      };
+      
+      final jsonStr = jsonEncode(fullData);
+      
+      final key = enc.Key(_encryptionKey);
+      final iv = enc.IV.fromSecureRandom(16);
+      
+      final encrypter = enc.Encrypter(enc.AES(key));
+      final encrypted = encrypter.encrypt(jsonStr, iv: iv);
+      
+      final backupData = "${iv.base64}:${encrypted.base64}";
+      
+      final directory = Directory('/storage/emulated/0/Documents/RutineBackup');
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      
+      final file = File('${directory.path}/rutine_auto_backup.enc');
+      await file.writeAsString(backupData);
+    } catch (e) {
+      print("Error en autobackup: $e");
+    }
+  }
+
+  static Future<bool> hasAutoBackup() async {
+    if (!Platform.isAndroid) return false;
+    var status = await Permission.manageExternalStorage.status;
+    if (!status.isGranted) return false;
+    
+    final file = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.enc');
+    return await file.exists();
+  }
+
+  static Future<void> restoreAutoBackup() async {
+    final file = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.enc');
+    if (!await file.exists()) return;
+    await importSecureBackup(file);
+  }
+
   static Future<void> importSecureBackup(File file) async {
     final backupData = await file.readAsString();
     final parts = backupData.split(':');
@@ -296,9 +355,25 @@ class HiveService {
     final encrypter = enc.Encrypter(enc.AES(key));
     final decryptedStr = encrypter.decrypt(encryptedData, iv: iv);
     
-    final List<dynamic> jsonList = jsonDecode(decryptedStr);
-    final tasks = jsonList.map((map) => Task.fromMap(map as Map<dynamic, dynamic>)).toList();
+    final decoded = jsonDecode(decryptedStr);
     
-    await saveTasks(tasks);
+    if (decoded is List) {
+      // Formato antiguo
+      final tasks = decoded.map((map) => Task.fromMap(map as Map<dynamic, dynamic>)).toList();
+      await saveTasks(tasks);
+    } else if (decoded is Map) {
+      // Formato nuevo
+      if (decoded.containsKey('tasks')) {
+        final tasks = (decoded['tasks'] as List).map((map) => Task.fromMap(map as Map<dynamic, dynamic>)).toList();
+        await saveTasks(tasks);
+      }
+      if (decoded.containsKey('goals')) {
+        await _goalsBox.clear();
+        final goalsList = (decoded['goals'] as List).map((map) => MonthlyGoal.fromMap(map as Map<dynamic, dynamic>)).toList();
+        for (var goal in goalsList) {
+          await _goalsBox.put(goal.id, goal.toMap());
+        }
+      }
+    }
   }
 }

@@ -14,21 +14,19 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 ## Funcionalidades Principales (Features)
 
 1. **Gestión Integral de Tareas:**
-   - Crear, visualizar, editar y eliminar tareas con categorías especializadas (Universidad, Higiene, Trabajo, Deporte, Comida, Paseo, Entretenimiento, Leer, Investigar, Gaming, Meditación, etc).
+   - Crear, visualizar, editar y eliminar tareas con categorías especializadas.
    - Asignación de iconos específicos y colores por cada categoría.
-   - Posibilidad de establecer fechas y horas precisas.
+   - Establecer fechas, horas precisas y **Fechas Límite (Vencimiento)**. Las tareas que superan su límite sin completarse cambian automáticamente a estado "Vencida".
 
 2. **Recordatorios Inteligentes (Notificaciones Locales):**
    - Alarmas exactas integradas nativamente en Android con ícono y color representativo según la categoría.
    - Patrón de vibración personalizado y sonido específico (usando archivos `.mp3` propios) para garantizar que los recordatorios capten la atención.
-   - Posibilidad de definir cuántos minutos antes deseas ser avisado de tu actividad (10, 15, 30 minutos, etc).
+   - Configuración precisa: escoge cuántos minutos antes deseas ser avisado de la hora programada, y **cuántos días antes de su fecha límite** (ej. avisar 3 días antes de que venza). Además, cuentas con un **Centro de Notificaciones** en Inicio para revisar tus alertas activas.
 
 3. **Gamificación y Estadísticas Interactivas:**
    - Panel de control principal con porcentaje de progreso en tiempo real y un **Reto Diario Interactivo** (de Zona de Confort) con botones para ganar rachas especiales.
-   - Panel interactivo de estadísticas (`StatsScreen`) con selección por fechas para analizar:
-     - El **Tiempo Invertido** por cada categoría y porcentaje de tu tiempo productivo en el día.
-     - Gráficas y tarjetas dinámicas que te muestran tu progreso.
-     - Posibilidad de **Exportar Estadísticas a CSV** para visualizarlas en Excel, detectando inteligentemente solo los meses en los que tienes actividad real.
+   - Panel interactivo de estadísticas (`StatsScreen`) con selección por fechas para analizar el tiempo invertido, crear **Metas Mensuales Personalizadas** por categoría o por tareas específicas (ej. "Cepillarse" u "Operaciones"), y visualizar gráficas dinámicas de progreso.
+   - Posibilidad de **Exportar Estadísticas a CSV** dividido en archivos para Tareas, Retos y Metas.
    - Perfil con **Títulos de Gamificación** según tu racha general y una Racha de Confort independiente.
    - Contadores numéricos que premian los días perfectos consecutivos (Mejor Racha y Racha Actual).
 
@@ -65,7 +63,8 @@ Todo esto está envuelto en una experiencia de usuario rápida, fluida y sumamen
 
 ### Agenda (Calendario Semanal)
 - Toca el ícono de calendario en la barra inferior.
-- En la parte superior verás un carrusel de fechas. Selecciónalo para ir al día que desees organizar o revisar (ideal para prepararte para el día de mañana).
+- En la parte superior verás un carrusel de fechas para ir al día que desees organizar.
+- **Vista Línea de Tiempo (Timeline):** Toca el ícono de calendario en la esquina superior derecha para alternar entre la lista normal y una visualización estilo **Google Calendar**, donde cada tarea y evento ocupa su bloque exacto de tiempo en el día de forma proporcional, permitiéndote ver tu rutina de un vistazo.
 
 ### Panel de Estadísticas Dinámico (Stats)
 - Toca el ícono de gráfica en la barra inferior.
@@ -124,5 +123,5 @@ El proyecto está diseñado exclusivamente para **Flutter**.
 ## Arquitectura de Ciberseguridad Integrada
 Rutine incluye un sólido protocolo de seguridad (implementado en la Fase de Seguridad):
 1. **Encriptación de Base de Datos:** Todos los datos en reposo guardados por `Hive` están cifrados usando **AES-256**, con una llave criptográfica maestra generada y almacenada en el hardware (`Keystore` usando `flutter_secure_storage`).
-2. **Backups Seguros:** Al solicitar una Copia de Seguridad desde el Perfil, Rutine genera un archivo cifrado (`.enc`) usando encriptación simétrica. El backup es exportado usando el sistema nativo de tu teléfono (vía `share_plus`), asegurando que nadie pueda interceptar o leer tus datos si el archivo cae en manos equivocadas. Además, puedes **importar** estos archivos de forma segura para restaurar tus rutinas.
+2. **Auto-Backup Silencioso (Escudo Anti-Desinstalación):** Cada vez que haces un cambio, la app genera en milisegundos un archivo encriptado `rutine_auto_backup.enc` y lo guarda en la carpeta pública **`Documents/RutineBackup`** de tu teléfono, usando permisos de administración de archivos. Si desinstalas la app, este archivo sobrevive en tu sistema, y al reinstalarla, se restaurará todo tu progreso de manera automática.
 3. **Resistencia a Ingeniería Inversa:** El uso de `--obfuscate` al compilar asegura que las estructuras de datos, llaves de API, y lógica interna se transformen en código máquina (ARM) ilegible.
