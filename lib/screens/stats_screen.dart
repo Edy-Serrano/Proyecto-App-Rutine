@@ -688,6 +688,7 @@ class _StatsScreenState extends State<StatsScreen> {
   Future<void> _showAddGoalDialog() async {
     TaskCategory selectedCat = TaskCategoryExtension.uiOrder.first;
     int targetHours = 10;
+    int inputMinutes = 0;
     final _taskNameController = TextEditingController();
     
     await showDialog(
@@ -743,20 +744,46 @@ class _StatsScreenState extends State<StatsScreen> {
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
                   ),
                 ),
-                const SizedBox(height: 16),
-                Text('Objetivo en Horas', style: TextStyle(color: AppTheme.textSecondary)),
+                Text('Objetivo de Tiempo', style: TextStyle(color: AppTheme.textSecondary)),
                 const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.remove_circle_outline, color: AppTheme.neonPink),
-                      onPressed: targetHours > 1 ? () => setState(() => targetHours--) : null,
+                    Column(
+                      children: [
+                        Text('Horas', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, color: AppTheme.neonPink),
+                              onPressed: targetHours > 0 ? () => setState(() => targetHours--) : null,
+                            ),
+                            Text('$targetHours h', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline, color: AppTheme.neonCyan),
+                              onPressed: () => setState(() => targetHours++),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
-                    Text('$targetHours h', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    IconButton(
-                      icon: const Icon(Icons.add_circle_outline, color: AppTheme.neonCyan),
-                      onPressed: () => setState(() => targetHours++),
+                    Column(
+                      children: [
+                        Text('Minutos', style: TextStyle(color: AppTheme.textMuted, fontSize: 12)),
+                        Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(Icons.remove_circle_outline, color: AppTheme.neonPink),
+                              onPressed: inputMinutes > 0 ? () => setState(() => inputMinutes -= 5) : null,
+                            ),
+                            Text('$inputMinutes m', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                            IconButton(
+                              icon: const Icon(Icons.add_circle_outline, color: AppTheme.neonCyan),
+                              onPressed: inputMinutes < 55 ? () => setState(() => inputMinutes += 5) : null,
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -774,7 +801,7 @@ class _StatsScreenState extends State<StatsScreen> {
                     id: DateTime.now().millisecondsSinceEpoch.toString(),
                     category: selectedCat,
                     taskName: _taskNameController.text.trim().isEmpty ? null : _taskNameController.text.trim(),
-                    targetMinutes: targetHours * 60,
+                    targetMinutes: (targetHours * 60) + inputMinutes,
                     month: _selectedDate.month,
                     year: _selectedDate.year,
                   );
