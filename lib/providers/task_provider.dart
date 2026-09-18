@@ -10,6 +10,8 @@ class TaskProvider extends ChangeNotifier {
   String? _userImagePath;
 
   TaskProvider() {
+    _userName = HiveService.getUserName();
+    _userImagePath = HiveService.getUserImagePath();
     loadTasks();
   }
 
@@ -22,8 +24,6 @@ class TaskProvider extends ChangeNotifier {
     
     await _checkOverdueTasks();
 
-    _userName = HiveService.getUserName();
-    _userImagePath = HiveService.getUserImagePath();
     notifyListeners();
   }
 

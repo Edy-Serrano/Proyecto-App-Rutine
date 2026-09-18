@@ -35,6 +35,11 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
   int _proteinGrams = 0;
   int _carbsGrams = 0;
 
+  // Proyecto
+  List<String> _projectStages = [];
+  List<bool> _projectStagesStatus = [];
+  final _stageController = TextEditingController();
+
   static const List<String> _dayLabels = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   @override
@@ -64,6 +69,10 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
         _proteinGrams = t.foodMetadata!['protein'] as int? ?? 0;
         _carbsGrams = t.foodMetadata!['carbs'] as int? ?? 0;
       }
+      if (t.projectStages != null) {
+        _projectStages = List.from(t.projectStages!);
+        _projectStagesStatus = List.from(t.projectStagesStatus ?? List.filled(_projectStages.length, false));
+      }
     } else if (widget.initialDate != null) {
       _selectedDate = widget.initialDate!;
     }
@@ -75,6 +84,7 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     _descController.dispose();
     _notifController.dispose();
     _notifyDaysController.dispose();
+    _stageController.dispose();
     super.dispose();
   }
 
@@ -190,6 +200,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
           'protein': _proteinGrams,
           'carbs': _carbsGrams,
         } : null,
+        projectStages: _selectedCategory == TaskCategory.project ? _projectStages : null,
+        projectStagesStatus: _selectedCategory == TaskCategory.project ? _projectStagesStatus : null,
       );
       
       if (updated.recurringGroupId != null) {
@@ -243,6 +255,8 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
           'protein': _proteinGrams,
           'carbs': _carbsGrams,
         } : null,
+        projectStages: _selectedCategory == TaskCategory.project ? _projectStages : null,
+        projectStagesStatus: _selectedCategory == TaskCategory.project ? _projectStagesStatus : null,
       );
       widget.provider.addTask(task);
     }
@@ -518,6 +532,12 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
             // === SECCIÓN FOOD ===
             if (_selectedCategory == TaskCategory.food) ...[
               _buildFoodSection(),
+              const SizedBox(height: 28),
+            ],
+            
+            // === SECCIÓN PROYECTO ===
+            if (_selectedCategory == TaskCategory.project) ...[
+              _buildProjectSection(),
               const SizedBox(height: 28),
             ],
 
@@ -841,14 +861,152 @@ class _AddTaskSheetState extends State<AddTaskSheet> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Información Nutricional',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(color: AppTheme.catFood)),
-        const SizedBox(height: 12),
-        _buildCounter('Vasos de Agua', _waterGlasses, (v) => setState(() => _waterGlasses = v)),
-        const SizedBox(height: 12),
-        _buildCounter('Proteínas (g)', _proteinGrams, (v) => setState(() => _proteinGrams = v), step: 5),
-        const SizedBox(height: 12),
-        _buildCounter('Carbohidratos (g)', _carbsGrams, (v) => setState(() => _carbsGrams = v), step: 5),
+        Text('Metas de Nutrición',
+            style: Theme.of(context)
+                .textTheme
+                .titleMedium
+                ?.copyWith(color: AppTheme.textSecondary)),
+        const SizedBox(height: 14),
+        _buildCounter(
+          'Agua (Vasos)',
+          _waterGlasses,
+          (v) => setState(() => _waterGlasses = v),
+        ),
+        const SizedBox(height: 10),
+        _buildCounter(
+          'Proteína (g)',
+          _proteinGrams,
+          (v) => setState(() => _proteinGrams = v),
+          step: 5,
+        ),
+        const SizedBox(height: 10),
+        _buildCounter(
+          'Carbohidratos (g)',
+          _carbsGrams,
+          (v) => setState(() => _carbsGrams = v),
+          step: 5,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProjectSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.account_tree_rounded, color: AppTheme.neonCyan),
+            const SizedBox(width: 8),
+            Text('Etapas del Proyecto',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(color: AppTheme.neonCyan)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Container(
+          decoration: BoxDecoration(
+            color: AppTheme.bgSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppTheme.neonCyan.withOpacity(0.3)),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              if (_projectStages.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text('Añade etapas para ver crecer tu proyecto 🌱', style: TextStyle(color: AppTheme.textMuted)),
+                ),
+              ...List.generate(_projectStages.length, (index) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: AppTheme.neonCyan.withOpacity(0.2),
+                          border: Border.all(color: AppTheme.neonCyan),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text('${index + 1}', style: const TextStyle(color: AppTheme.neonCyan, fontSize: 12, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(_projectStages[index], style: const TextStyle(color: Colors.white)),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 20),
+                        onPressed: () {
+                          setState(() {
+                            _projectStages.removeAt(index);
+                            _projectStagesStatus.removeAt(index);
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _stageController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Nueva etapa...',
+                        hintStyle: TextStyle(color: AppTheme.textMuted),
+                        filled: true,
+                        fillColor: AppTheme.bgDark,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                      ),
+                      onSubmitted: (val) {
+                        if (val.trim().isNotEmpty) {
+                          setState(() {
+                            _projectStages.add(val.trim());
+                            _projectStagesStatus.add(false);
+                            _stageController.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: AppTheme.neonCyan,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: IconButton(
+                      icon: Icon(Icons.add_rounded, color: AppTheme.bgDark),
+                      onPressed: () {
+                        final val = _stageController.text.trim();
+                        if (val.isNotEmpty) {
+                          setState(() {
+                            _projectStages.add(val);
+                            _projectStagesStatus.add(false);
+                            _stageController.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ],
     );
   }

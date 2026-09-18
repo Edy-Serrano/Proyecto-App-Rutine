@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:rutine/theme/app_theme.dart';
 
-enum TaskCategory { hygiene, university, work, shopping, leisure, sports, food, custom, ocio, reading, research, gaming, meditation }
+enum TaskCategory { hygiene, university, work, shopping, leisure, sports, food, custom, ocio, reading, research, gaming, meditation, project }
 
 enum TaskPriority { normal, important, strict }
 
@@ -45,6 +45,7 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.research:    return 'Investigar';
       case TaskCategory.gaming:      return 'Gaming';
       case TaskCategory.meditation:  return 'Meditación';
+      case TaskCategory.project:     return 'Proyecto';
     }
   }
 
@@ -63,6 +64,7 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.research:    return Icons.science_rounded;
       case TaskCategory.gaming:      return Icons.videogame_asset_rounded;
       case TaskCategory.meditation:  return Icons.self_improvement_rounded;
+      case TaskCategory.project:     return Icons.account_tree_rounded;
     }
   }
 
@@ -80,7 +82,8 @@ extension TaskCategoryExtension on TaskCategory {
       case TaskCategory.reading:     return AppTheme.catReading;
       case TaskCategory.research:    return AppTheme.catResearch;
       case TaskCategory.gaming:      return AppTheme.catGaming;
-      case TaskCategory.meditation:  return AppTheme.catMeditation;
+      case TaskCategory.meditation:  return AppTheme.neonCyan;
+      case TaskCategory.project:     return AppTheme.catMeditation;
     }
   }
 }
@@ -132,6 +135,8 @@ class Task {
   int? notifyDaysBeforeDueDate;
   List<TimeLog> history;
   Map<String, dynamic>? foodMetadata;
+  List<String>? projectStages;
+  List<bool>? projectStagesStatus;
 
   Task({
     required this.id,
@@ -156,6 +161,8 @@ class Task {
     this.notifyDaysBeforeDueDate,
     List<TimeLog>? history,
     this.foodMetadata,
+    this.projectStages,
+    this.projectStagesStatus,
   }) : history = history ?? [];
 
   Task copyWith({
@@ -181,6 +188,8 @@ class Task {
     int? notifyDaysBeforeDueDate,
     List<TimeLog>? history,
     Map<String, dynamic>? foodMetadata,
+    List<String>? projectStages,
+    List<bool>? projectStagesStatus,
   }) {
     return Task(
       id: id ?? this.id,
@@ -205,6 +214,8 @@ class Task {
       notifyDaysBeforeDueDate: notifyDaysBeforeDueDate ?? this.notifyDaysBeforeDueDate,
       history: history ?? this.history.map((e) => TimeLog(date: e.date, minutes: e.minutes, note: e.note)).toList(),
       foodMetadata: foodMetadata ?? (this.foodMetadata != null ? Map<String, dynamic>.from(this.foodMetadata!) : null),
+      projectStages: projectStages ?? (this.projectStages != null ? List.from(this.projectStages!) : null),
+      projectStagesStatus: projectStagesStatus ?? (this.projectStagesStatus != null ? List.from(this.projectStagesStatus!) : null),
     );
   }
 
@@ -234,6 +245,8 @@ class Task {
       'notifyDaysBeforeDueDate': notifyDaysBeforeDueDate,
       'history': history.map((e) => e.toMap()).toList(),
       'foodMetadata': foodMetadata,
+      'projectStages': projectStages,
+      'projectStagesStatus': projectStagesStatus,
     };
   }
 
@@ -269,6 +282,12 @@ class Task {
       notifyDaysBeforeDueDate: map['notifyDaysBeforeDueDate'] as int?,
       history: (map['history'] as List<dynamic>?)?.map((e) => TimeLog.fromMap(e as Map<dynamic, dynamic>)).toList() ?? [],
       foodMetadata: map['foodMetadata'] != null ? Map<String, dynamic>.from(map['foodMetadata'] as Map) : null,
+      projectStages: map['projectStages'] != null
+          ? (map['projectStages'] as List).cast<String>()
+          : null,
+      projectStagesStatus: map['projectStagesStatus'] != null
+          ? (map['projectStagesStatus'] as List).cast<bool>()
+          : null,
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:rutine/providers/task_provider.dart';
 import 'package:percent_indicator/percent_indicator.dart';
 import 'package:flutter/services.dart';
 import 'package:rutine/screens/add_task_sheet.dart';
+import 'package:rutine/widgets/project_status_sheet.dart';
 import 'package:rutine/repositories/challenge_repository.dart';
 import 'package:rutine/services/hive_service.dart';
 import 'package:rutine/widgets/time_log_dialog.dart';
@@ -344,7 +345,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         }
       },
       child: GestureDetector(
-        onTap: () => _showTaskDetails(context, task, provider),
+        onTap: () {
+          if (task.category == TaskCategory.project) {
+            showModalBottomSheet(
+              context: context,
+              isScrollControlled: true,
+              backgroundColor: Colors.transparent,
+              builder: (context) => ProjectStatusSheet(task: task, provider: provider),
+            );
+          } else {
+            _showTaskDetails(context, task, provider);
+          }
+        },
         onLongPress: () {
           HapticFeedback.mediumImpact();
           showModalBottomSheet(
@@ -440,7 +452,32 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             // Checkbox animado
-            GestureDetector(
+            task.category == TaskCategory.project
+            ? GestureDetector(
+                onTap: () {
+                  showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) => ProjectStatusSheet(task: task, provider: provider),
+                  );
+                },
+                child: Container(
+                  width: 34,
+                  height: 34,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppTheme.bgSurface,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: AppTheme.neonCyan.withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    _getPlantEmoji(task),
+                    style: const TextStyle(fontSize: 18),
+                  ),
+                ),
+              )
+            : GestureDetector(
               onTap: () async {
                 if (!task.isCompleted) {
                   final result = await showDialog<Map<String, dynamic>>(
@@ -971,5 +1008,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
+  }
+  String _getPlantEmoji(Task task) {
+    final stages = task.projectStages ?? [];
+    final statuses = task.projectStagesStatus ?? [];
+    int completedCount = statuses.where((s) => s).length;
+    int totalCount = stages.length;
+    if (totalCount == 0) return '🌱';
+    final fraction = completedCount / totalCount;
+    if (fraction == 0) return '🫘';
+    if (fraction <= 0.33) return '🌱';
+    if (fraction <= 0.66) return '🌿';
+    if (fraction < 1.0) return '🌳';
+    return '🍎';
   }
 }

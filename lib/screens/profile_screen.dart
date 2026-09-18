@@ -5,6 +5,8 @@ import 'package:rutine/theme/app_theme.dart';
 import 'package:rutine/providers/task_provider.dart';
 import 'package:rutine/providers/theme_provider.dart';
 import 'package:rutine/services/hive_service.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as p;
 import 'package:share_plus/share_plus.dart';
 import 'package:rutine/models/task_model.dart';
 import 'package:rutine/repositories/challenge_repository.dart';
@@ -58,7 +60,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final pickedFile = await picker.pickImage(source: source);
       if (pickedFile != null) {
-        widget.provider.updateUserImage(pickedFile.path);
+        final directory = await getApplicationDocumentsDirectory();
+        final ext = p.extension(pickedFile.path);
+        final newPath = p.join(directory.path, 'profile_picture$ext');
+        
+        final savedImage = await File(pickedFile.path).copy(newPath);
+        
+        widget.provider.updateUserImage(savedImage.path);
         setState(() {}); // Forzar redibujo de la imagen
       }
     } catch (e) {
