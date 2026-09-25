@@ -484,6 +484,12 @@ class TaskProvider extends ChangeNotifier {
       foodMetadata: original.foodMetadata != null
           ? Map<String, dynamic>.from(original.foodMetadata!)
           : null,
+      projectStages: original.projectStages != null
+          ? List.from(original.projectStages!)
+          : null,
+      projectStagesStatus: original.projectStagesStatus != null
+          ? List.from(original.projectStagesStatus!)
+          : null,
     );
 
     _tasks.add(continuation);

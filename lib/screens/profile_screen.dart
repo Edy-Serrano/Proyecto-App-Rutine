@@ -480,7 +480,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       tasks.sort((a, b) => a.date.compareTo(b.date)); // Ordenar tareas por fecha (más antiguas primero)
       
       // Añadimos el BOM (\uFEFF) para que Excel reconozca correctamente el UTF-8 (Tildes, ñ, Emojis)
-      String tasksCsv = "\uFEFFTarea,Descripcion,Categoria,Estado,Motivo_Cancelacion,Minutos_Mes,Notas_Tiempo,Fecha_Creacion\n";
+      String tasksCsv = "\uFEFFTarea,Descripcion,Categoria,Estado,Motivo_Cancelacion,Minutos_Mes,Notas_Tiempo,Fecha_Creacion,Fases_Proyecto\n";
 
       for (var t in tasks) {
         int minutes = 0;
@@ -500,7 +500,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           String cancelReason = _sanitizeExcel((t.cancelReason ?? '').replaceAll('"', '""'));
           String allNotes = _sanitizeExcel(notesList.join(" | "));
           
-          tasksCsv += '"$title","$desc","${t.category.label}","$status","$cancelReason",$minutes,"$allNotes","${t.date.toIso8601String()}"\n';
+          String projectPhases = "";
+          if (t.projectStages != null && t.projectStages!.isNotEmpty) {
+            List<String> phasesList = [];
+            for (int i = 0; i < t.projectStages!.length; i++) {
+              String phaseName = t.projectStages![i];
+              bool phaseStatus = (t.projectStagesStatus != null && t.projectStagesStatus!.length > i) ? t.projectStagesStatus![i] : false;
+              String statusStr = phaseStatus ? "Completado" : "Pendiente";
+              phasesList.add("$phaseName ($statusStr)");
+            }
+            projectPhases = _sanitizeExcel(phasesList.join(" | ").replaceAll('"', '""'));
+          }
+          
+          tasksCsv += '"$title","$desc","${t.category.label}","$status","$cancelReason",$minutes,"$allNotes","${t.date.toIso8601String()}","$projectPhases"\n';
         }
       }
 

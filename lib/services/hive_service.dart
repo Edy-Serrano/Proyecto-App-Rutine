@@ -178,6 +178,14 @@ class HiveService {
     await _prefsBox.put('userName', name);
   }
 
+  static bool getHasAskedForRestore() {
+    return _prefsBox.get('hasAskedForRestore', defaultValue: false);
+  }
+
+  static Future<void> setHasAskedForRestore(bool asked) async {
+    await _prefsBox.put('hasAskedForRestore', asked);
+  }
+
   static String? getUserImagePath() {
     return _prefsBox.get('userImagePath');
   }
@@ -321,8 +329,13 @@ class HiveService {
         await directory.create(recursive: true);
       }
       
-      final file = File('${directory.path}/rutine_auto_backup.enc');
-      await file.writeAsString(backupData);
+      // Guardar versión encriptada por compatibilidad
+      final fileEnc = File('${directory.path}/rutine_auto_backup.enc');
+      await fileEnc.writeAsString(backupData);
+
+      // Guardar versión JSON sin encriptar para evitar pérdida de datos si se desinstala la app
+      final fileJson = File('${directory.path}/rutine_auto_backup.json');
+      await fileJson.writeAsString(jsonStr);
     } catch (e) {
       print("Error en autobackup: $e");
     }
@@ -333,30 +346,33 @@ class HiveService {
     var status = await Permission.manageExternalStorage.status;
     if (!status.isGranted) return false;
     
-    final file = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.enc');
-    return await file.exists();
+    final fileJson = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.json');
+    if (await fileJson.exists()) return true;
+
+    final fileEnc = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.enc');
+    return await fileEnc.exists();
   }
 
   static Future<void> restoreAutoBackup() async {
-    final file = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.enc');
-    if (!await file.exists()) return;
-    await importSecureBackup(file);
+    final fileJson = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.json');
+    if (await fileJson.exists()) {
+      try {
+        final jsonStr = await fileJson.readAsString();
+        final decoded = jsonDecode(jsonStr);
+        await _importDecodedData(decoded);
+        return;
+      } catch (e) {
+        print("Error al restaurar JSON: $e");
+      }
+    }
+
+    final fileEnc = File('/storage/emulated/0/Documents/RutineBackup/rutine_auto_backup.enc');
+    if (await fileEnc.exists()) {
+      await importSecureBackup(fileEnc);
+    }
   }
 
-  static Future<void> importSecureBackup(File file) async {
-    final backupData = await file.readAsString();
-    final parts = backupData.split(':');
-    if (parts.length != 2) throw Exception("Formato de backup inválido");
-    
-    final iv = enc.IV.fromBase64(parts[0]);
-    final encryptedData = enc.Encrypted.fromBase64(parts[1]);
-    final key = enc.Key(_encryptionKey);
-    
-    final encrypter = enc.Encrypter(enc.AES(key));
-    final decryptedStr = encrypter.decrypt(encryptedData, iv: iv);
-    
-    final decoded = jsonDecode(decryptedStr);
-    
+  static Future<void> _importDecodedData(dynamic decoded) async {
     if (decoded is List) {
       // Formato antiguo
       final tasks = decoded.map((map) => Task.fromMap(map as Map<dynamic, dynamic>)).toList();
@@ -375,5 +391,21 @@ class HiveService {
         }
       }
     }
+  }
+
+  static Future<void> importSecureBackup(File file) async {
+    final backupData = await file.readAsString();
+    final parts = backupData.split(':');
+    if (parts.length != 2) throw Exception("Formato de backup inválido");
+    
+    final iv = enc.IV.fromBase64(parts[0]);
+    final encryptedData = enc.Encrypted.fromBase64(parts[1]);
+    final key = enc.Key(_encryptionKey);
+    
+    final encrypter = enc.Encrypter(enc.AES(key));
+    final decryptedStr = encrypter.decrypt(encryptedData, iv: iv);
+    
+    final decoded = jsonDecode(decryptedStr);
+    await _importDecodedData(decoded);
   }
 }

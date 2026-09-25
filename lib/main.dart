@@ -6,16 +6,9 @@ import 'package:rutine/services/hive_service.dart';
 import 'package:rutine/services/notification_service.dart';
 import 'package:rutine/providers/theme_provider.dart';
 
-void main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Inicializamos la base de datos local
-  await HiveService.init();
-
-  // Inicializamos las notificaciones locales
-  await NotificationService.init();
-  await NotificationService.requestPermissions();
-
   // Configuramos la barra de estado del teléfono para que sea transparente
   SystemChrome.setSystemUIOverlayStyle(
     SystemUiOverlayStyle(
@@ -26,18 +19,67 @@ void main() async {
     ),
   );
   
-  final themeProvider = ThemeProvider();
-  runApp(RutineApp(themeProvider: themeProvider));
+  runApp(const RutineApp());
 }
 
-class RutineApp extends StatelessWidget {
-  final ThemeProvider themeProvider;
-  const RutineApp({super.key, required this.themeProvider});
+class RutineApp extends StatefulWidget {
+  const RutineApp({super.key});
+
+  @override
+  State<RutineApp> createState() => _RutineAppState();
+}
+
+class _RutineAppState extends State<RutineApp> {
+  ThemeProvider? _themeProvider;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    // Inicializamos la base de datos local
+    await HiveService.init();
+
+    // Inicializamos las notificaciones locales
+    await NotificationService.init();
+    await NotificationService.requestPermissions();
+
+    if (mounted) {
+      setState(() {
+        _themeProvider = ThemeProvider();
+        _initialized = true;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_initialized || _themeProvider == null) {
+      return MaterialApp(
+        title: 'Rutine',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.themeData,
+        home: Scaffold(
+          backgroundColor: AppTheme.bgDark,
+          body: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.auto_awesome, size: 80, color: AppTheme.neonPurple),
+                const SizedBox(height: 32),
+                const CircularProgressIndicator(color: AppTheme.neonCyan),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return ListenableBuilder(
-      listenable: themeProvider,
+      listenable: _themeProvider!,
       builder: (context, _) {
         // Actualizar la barra de estado según el tema activo
         SystemChrome.setSystemUIOverlayStyle(
@@ -53,9 +95,11 @@ class RutineApp extends StatelessWidget {
           title: 'Rutine',
           debugShowCheckedModeBanner: false,
           theme: AppTheme.themeData,
-          home: MainNavigation(themeProvider: themeProvider),
+          home: MainNavigation(themeProvider: _themeProvider!),
         );
       },
     );
   }
 }
+
+

@@ -47,7 +47,7 @@ class _MainNavigationState extends State<MainNavigation> {
       await Permission.manageExternalStorage.request();
     }
 
-    if (_provider.tasks.isEmpty && await HiveService.hasAutoBackup()) {
+    if (_provider.tasks.isEmpty && await HiveService.hasAutoBackup() && !HiveService.getHasAskedForRestore()) {
       if (!mounted) return;
       showDialog(
         context: context,
@@ -61,12 +61,16 @@ class _MainNavigationState extends State<MainNavigation> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await HiveService.setHasAskedForRestore(true);
+              },
               child: Text('Ignorar', style: TextStyle(color: AppTheme.textMuted)),
             ),
             ElevatedButton(
               onPressed: () async {
                 Navigator.pop(ctx);
+                await HiveService.setHasAskedForRestore(true);
                 await HiveService.restoreAutoBackup();
                 await _provider.loadTasks();
                 if (!mounted) return;
