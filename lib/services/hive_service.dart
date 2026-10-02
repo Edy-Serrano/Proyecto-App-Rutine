@@ -202,6 +202,15 @@ class HiveService {
     await _prefsBox.put('isDarkMode', isDark);
   }
 
+  static bool getUseCircadianTheme() {
+    return _prefsBox.get('useCircadianTheme', defaultValue: true); // Habilitado por defecto para que lo vea!
+  }
+
+  static Future<void> setUseCircadianTheme(bool useCircadian) async {
+    await _prefsBox.put('useCircadianTheme', useCircadian);
+  }
+
+
   static bool getNotificationsEnabled() {
     return _prefsBox.get('notificationsEnabled', defaultValue: false);
   }

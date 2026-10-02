@@ -1,13 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+enum ThemePhase { morning, afternoon, evening, night }
+
 class AppTheme {
   static bool isDarkMode = true;
+  static bool useCircadian = true;
+  static ThemePhase currentPhase = ThemePhase.morning;
 
-  // === PALETA DE COLORES ===
-  static Color get bgDark => isDarkMode ? const Color(0xFF0D0D14) : const Color(0xFFE0F7FA); // Fondo oscuro o Cian claro
-  static Color get bgCard => isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFFFFFFF); // Tarjetas
-  static Color get bgSurface => isDarkMode ? const Color(0xFF16213E) : const Color(0xFFF3E8FF); // Superficies (Morado claro)
+  static void updateCircadianPhase() {
+    final hour = DateTime.now().hour;
+    if (hour >= 6 && hour < 12) {
+      currentPhase = ThemePhase.morning;
+      isDarkMode = false;
+    } else if (hour >= 12 && hour < 18) {
+      currentPhase = ThemePhase.afternoon;
+      isDarkMode = false;
+    } else if (hour >= 18 && hour < 21) {
+      currentPhase = ThemePhase.evening;
+      isDarkMode = true; // El atardecer ya es modo oscuro suave
+    } else {
+      currentPhase = ThemePhase.night;
+      isDarkMode = true;
+    }
+  }
+
+  // === PALETA DE COLORES DINÁMICA ===
+  static Color get bgDark {
+    if (!useCircadian) return isDarkMode ? const Color(0xFF0D0D14) : const Color(0xFFE0F7FA);
+    switch (currentPhase) {
+      case ThemePhase.morning: return const Color(0xFFE0F7FA); // Cian claro brillante
+      case ThemePhase.afternoon: return const Color(0xFFF1F5F9); // Neutro productivo
+      case ThemePhase.evening: return const Color(0xFF2C1810); // Ámbar oscuro (Sunset)
+      case ThemePhase.night: return const Color(0xFF0A0A0A); // Negro puro zen
+    }
+  }
+
+  static Color get bgCard {
+    if (!useCircadian) return isDarkMode ? const Color(0xFF1A1A2E) : const Color(0xFFFFFFFF);
+    switch (currentPhase) {
+      case ThemePhase.morning: return const Color(0xFFFFFFFF);
+      case ThemePhase.afternoon: return const Color(0xFFFFFFFF);
+      case ThemePhase.evening: return const Color(0xFF3E2723); // Marrón cálido
+      case ThemePhase.night: return const Color(0xFF121212); // Gris muy oscuro
+    }
+  }
+
+  static Color get bgSurface {
+    if (!useCircadian) return isDarkMode ? const Color(0xFF16213E) : const Color(0xFFF3E8FF);
+    switch (currentPhase) {
+      case ThemePhase.morning: return const Color(0xFFB2EBF2);
+      case ThemePhase.afternoon: return const Color(0xFFE2E8F0);
+      case ThemePhase.evening: return const Color(0xFF4E342E);
+      case ThemePhase.night: return const Color(0xFF1C1C1C);
+    }
+  }
 
   // Colores de acento Neón (se mantienen vibrantes en ambos modos)
   static const Color neonPurple = Color(0xFF7C3AED);
@@ -31,9 +78,35 @@ class AppTheme {
   static const Color catCustom = Color(0xFF64748B); // Gris Pizarra para Otros
 
   // Textos
-  static Color get textPrimary => isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
-  static Color get textSecondary => isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569);
-  static Color get textMuted => isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8);
+  static Color get textPrimary {
+    if (!useCircadian) return isDarkMode ? const Color(0xFFF1F5F9) : const Color(0xFF0F172A);
+    switch (currentPhase) {
+      case ThemePhase.morning: return const Color(0xFF0F172A);
+      case ThemePhase.afternoon: return const Color(0xFF1E293B);
+      case ThemePhase.evening: return const Color(0xFFFDE68A); // Amarillo suave
+      case ThemePhase.night: return const Color(0xFFCBD5E1); // Gris azulado claro
+    }
+  }
+
+  static Color get textSecondary {
+    if (!useCircadian) return isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569);
+    switch (currentPhase) {
+      case ThemePhase.morning: return const Color(0xFF475569);
+      case ThemePhase.afternoon: return const Color(0xFF475569);
+      case ThemePhase.evening: return const Color(0xFFD97706); // Naranja suave
+      case ThemePhase.night: return const Color(0xFF64748B); // Gris más oscuro
+    }
+  }
+
+  static Color get textMuted {
+    if (!useCircadian) return isDarkMode ? const Color(0xFF475569) : const Color(0xFF94A3B8);
+    switch (currentPhase) {
+      case ThemePhase.morning: return const Color(0xFF94A3B8);
+      case ThemePhase.afternoon: return const Color(0xFF94A3B8);
+      case ThemePhase.evening: return const Color(0xFF92400E); // Marrón naranja tenue
+      case ThemePhase.night: return const Color(0xFF334155); // Gris muy oscuro
+    }
+  }
 
   // === GRADIENTES ===
   static LinearGradient get primaryGradient => const LinearGradient(

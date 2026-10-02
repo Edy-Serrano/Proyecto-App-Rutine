@@ -270,11 +270,31 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             _buildSettingsTile(
+              icon: Icons.access_time_rounded,
+              iconColor: AppTheme.neonPurple,
+              title: 'Tema Circadiano (Automático)',
+              subtitle: widget.themeProvider.useCircadian ? 'Activado (Cambia según la hora)' : 'Desactivado',
+              trailing: Switch(
+                value: widget.themeProvider.useCircadian,
+                onChanged: (v) => widget.themeProvider.toggleCircadian(v),
+                activeColor: AppTheme.neonPurple,
+              ),
+            ),
+            _buildSettingsTile(
               icon: Icons.palette_rounded,
               iconColor: AppTheme.neonCyan,
-              title: 'Tema Visual',
-              subtitle: widget.themeProvider.isDarkMode ? 'Modo Oscuro' : 'Modo Claro',
-              onTap: () => widget.themeProvider.toggleTheme(),
+              title: 'Tema Visual (Manual)',
+              subtitle: widget.themeProvider.useCircadian 
+                  ? 'Desactiva Circadiano para cambiar manual' 
+                  : (widget.themeProvider.isDarkMode ? 'Modo Oscuro' : 'Modo Claro'),
+              onTap: () {
+                if (widget.themeProvider.useCircadian) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Tema cambiado a manual. Modo Circadiano desactivado.')),
+                  );
+                }
+                widget.themeProvider.toggleTheme();
+              },
             ),
             _buildSettingsTile(
               icon: Icons.backup_rounded,
